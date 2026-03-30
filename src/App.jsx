@@ -11,6 +11,7 @@ import GroupRoom from './pages/GroupRoom'
 import Collection from './pages/Collection'
 import Leaderboard from './pages/Leaderboard'
 import Profile from './pages/Profile'
+import Help from './pages/Help'
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/collection" element={<Collection />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile"    element={<Profile />} />
+          <Route path="/help"       element={<Help />} />
         </Routes>
         <NavBar />
       </div>
