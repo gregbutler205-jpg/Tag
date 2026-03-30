@@ -20,6 +20,8 @@ export default defineConfig({
         name: 'iWonde Tag',
         short_name: 'iWonde Tag',
         description: 'Decode vanity plates. Compete. Collect.',
+        scope: 'https://tag.iwonde.com/',
+        start_url: 'https://tag.iwonde.com/',
         theme_color: '#1e40af',
         background_color: '#0f172a',
         display: 'standalone',

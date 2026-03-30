@@ -16,7 +16,7 @@ const __dirname = dirname(__filename)
 const app = express()
 const PORT = process.env.PORT || 3001
 
-app.use(cors({ origin: ['http://localhost:5173', 'https://iwondetag.com', process.env.FRONTEND_URL].filter(Boolean) }))
+app.use(cors({ origin: ['http://localhost:5173', 'https://tag.iwonde.com', process.env.FRONTEND_URL].filter(Boolean) }))
 app.use(express.json({ limit: '10mb' }))
 
 app.use('/plates', platesRouter)
