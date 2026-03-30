@@ -1,73 +1,86 @@
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 
+function StatCard({ icon, value, label }) {
+  return (
+    <div className="glass-card rounded-2xl p-4 text-center flex flex-col items-center gap-1">
+      <span className="text-2xl">{icon}</span>
+      <span className="text-2xl font-black text-white leading-none">{value}</span>
+      <span className="text-xs text-slate-500 uppercase tracking-wide">{label}</span>
+    </div>
+  )
+}
+
+function ActionCard({ to, emoji, title, subtitle, accent = false }) {
+  return (
+    <Link
+      to={to}
+      className={`flex items-center gap-4 rounded-2xl p-4 transition-all active:scale-[0.98] ${
+        accent
+          ? 'bg-gradient-to-r from-brand-blue to-brand-blue-light border border-brand-blue-light/30 shadow-glow'
+          : 'glass-card hover:border-navy-500'
+      }`}
+    >
+      <span className="text-3xl w-10 text-center shrink-0">{emoji}</span>
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-white">{title}</div>
+        <div className={`text-sm truncate ${accent ? 'text-blue-200' : 'text-slate-500'}`}>{subtitle}</div>
+      </div>
+      <svg viewBox="0 0 20 20" fill="currentColor" className={`w-5 h-5 shrink-0 ${accent ? 'text-blue-200' : 'text-slate-600'}`}>
+        <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd"/>
+      </svg>
+    </Link>
+  )
+}
+
 export default function Home() {
   const { points, streak, statesCollected } = useStore()
 
   return (
-    <div className="p-4 space-y-6 max-w-lg mx-auto">
-      {/* Header */}
-      <div className="pt-6 text-center">
-        <h1 className="text-4xl font-black tracking-tight">
-          <span className="text-blue-400">iWonde</span>
-          <span className="text-yellow-400"> Tag</span>
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">Decode. Compete. Collect.</p>
-      </div>
+    <div className="pb-nav px-4 pt-5 space-y-5 max-w-lg mx-auto">
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Points', value: points.toLocaleString(), icon: '⭐' },
-          { label: 'Streak', value: `${streak}d`, icon: '🔥' },
-          { label: 'States', value: `${statesCollected.length}/51`, icon: '🗺️' },
-        ].map(({ label, value, icon }) => (
-          <div key={label} className="bg-slate-800 rounded-xl p-3 text-center border border-slate-700">
-            <div className="text-2xl">{icon}</div>
-            <div className="text-xl font-bold">{value}</div>
-            <div className="text-xs text-slate-400">{label}</div>
-          </div>
-        ))}
+        <StatCard icon="⭐" value={points.toLocaleString()} label="Points" />
+        <StatCard icon="🔥" value={`${streak}d`}           label="Streak" />
+        <StatCard icon="🗺️" value={`${statesCollected.length}/51`} label="States" />
       </div>
 
-      {/* Quick actions */}
+      {/* Actions */}
       <div className="space-y-3">
-        <Link to="/daily" className="flex items-center gap-4 bg-blue-600 hover:bg-blue-500 rounded-2xl p-4 transition-colors">
-          <span className="text-3xl">🏷️</span>
-          <div>
-            <div className="font-bold">Tag of the Day</div>
-            <div className="text-sm text-blue-200">Today's plate challenge</div>
-          </div>
-          <span className="ml-auto text-blue-200">→</span>
-        </Link>
-
-        <Link to="/submit" className="flex items-center gap-4 bg-slate-800 hover:bg-slate-700 rounded-2xl p-4 border border-slate-700 transition-colors">
-          <span className="text-3xl">📸</span>
-          <div>
-            <div className="font-bold">Submit a Plate</div>
-            <div className="text-sm text-slate-400">Camera or manual entry</div>
-          </div>
-          <span className="ml-auto text-slate-400">→</span>
-        </Link>
-
-        <Link to="/groups" className="flex items-center gap-4 bg-slate-800 hover:bg-slate-700 rounded-2xl p-4 border border-slate-700 transition-colors">
-          <span className="text-3xl">👥</span>
-          <div>
-            <div className="font-bold">Group Challenges</div>
-            <div className="text-sm text-slate-400">Play with friends</div>
-          </div>
-          <span className="ml-auto text-slate-400">→</span>
-        </Link>
-
-        <Link to="/leaderboard" className="flex items-center gap-4 bg-slate-800 hover:bg-slate-700 rounded-2xl p-4 border border-slate-700 transition-colors">
-          <span className="text-3xl">🏆</span>
-          <div>
-            <div className="font-bold">Leaderboard</div>
-            <div className="text-sm text-slate-400">Global rankings</div>
-          </div>
-          <span className="ml-auto text-slate-400">→</span>
-        </Link>
+        <ActionCard
+          to="/daily"
+          emoji="🏷️"
+          title="Tag of the Day"
+          subtitle="Today's plate challenge — earn bonus pts"
+          accent
+        />
+        <ActionCard
+          to="/submit"
+          emoji="📸"
+          title="Submit a Plate"
+          subtitle="Camera capture or manual entry"
+        />
+        <ActionCard
+          to="/groups"
+          emoji="👥"
+          title="Group Challenges"
+          subtitle="Compete blind with friends"
+        />
+        <ActionCard
+          to="/leaderboard"
+          emoji="🏆"
+          title="Leaderboard"
+          subtitle="See where you rank globally"
+        />
+        <ActionCard
+          to="/collection"
+          emoji="🗺️"
+          title="State Collection"
+          subtitle={`${statesCollected.length} of 51 collected`}
+        />
       </div>
+
     </div>
   )
 }

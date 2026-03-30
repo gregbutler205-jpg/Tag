@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import multer from 'multer'
-import { interpretPlate, moderatePlate } from '../lib/openai.js'
-import { extractPlateText } from '../lib/ocr.js'
+import { interpretPlate, moderatePlate, challengeInterpretation } from '../lib/openai.js'
+import { cropForPlateDetection } from '../lib/imageCropper.js'
+import { detectPlateVision } from '../lib/visionPipeline.js'
 import { optionalAuth } from '../lib/auth.js'
 import supabase from '../lib/supabase.js'
 
@@ -11,7 +12,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 // POST /plates/interpret — AI decode a plate
 router.post('/interpret', optionalAuth, async (req, res, next) => {
   try {
-    const { text, state, hasPhoto } = req.body
+    const { text, state, hasPhoto, vehicleMake, vehicleModel, vehicleType, specialtyPlateHints } = req.body
     if (!text || text.length < 2 || text.length > 8) {
       return res.status(400).json({ error: 'Plate text must be 2-8 characters' })
     }
@@ -22,7 +23,13 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
     const isFlagged = await moderatePlate(plateUpper).catch(() => false)
     if (isFlagged) return res.status(422).json({ error: 'This plate was flagged by our content filter' })
 
-    const result = await interpretPlate(plateUpper, state)
+    const result = await interpretPlate(plateUpper, {
+      state,
+      vehicleMake:          vehicleMake          || null,
+      vehicleModel:         vehicleModel         || null,
+      vehicleType:          vehicleType          || null,
+      specialtyPlateHints:  specialtyPlateHints  || null,
+    })
 
     // Add photo bonus
     if (hasPhoto) result.points += 25
@@ -56,15 +63,49 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
   }
 })
 
-// POST /plates/ocr — Extract text from photo
-router.post('/ocr', upload.single('photo'), async (req, res, next) => {
+// POST /plates/challenge — User challenges the AI's interpretation
+router.post('/challenge', optionalAuth, async (req, res, next) => {
+  try {
+    const { plateText, aiMeaning, userMeaning, state } = req.body
+    if (!plateText || !userMeaning?.trim()) {
+      return res.status(400).json({ error: 'plateText and userMeaning are required' })
+    }
+
+    // Moderate the user's interpretation before judging it
+    const flagged = await moderatePlate(userMeaning).catch(() => false)
+    if (flagged) return res.status(422).json({ error: 'Your interpretation was flagged by the content filter' })
+
+    const judgment = await challengeInterpretation(plateText, aiMeaning, userMeaning, { state })
+
+    // Award bonus points to authenticated user
+    if (req.user?.id && judgment.bonusPoints > 0) {
+      await supabase.rpc('add_points', {
+        p_user_id: req.user.id,
+        p_points:  judgment.bonusPoints,
+      }).catch(() => {})
+    }
+
+    res.json(judgment)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// POST /plates/ocr — Preprocess + vision pipeline plate detection
+router.post('/ocr', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No photo uploaded' })
-    const text = await extractPlateText(req.file.buffer)
-    res.json({ text: text || null })
+
+    // Step 1: Heuristic crop — vehicle rear → plate zone → full fallback
+    const { buffer: croppedBuffer, log: cropLog } = await cropForPlateDetection(req.file.buffer)
+
+    // Step 2: Vision pipeline — first pass + conditional escalation
+    const { text, meta } = await detectPlateVision(croppedBuffer, cropLog)
+
+    res.json({ text: text || null, meta })
   } catch (err) {
-    // Return null text if OCR fails — client falls back to manual entry
-    res.json({ text: null, error: err.message })
+    console.error('[OCR route]', err.message)
+    res.json({ text: null, meta: { error: err.message } })
   }
 })
 

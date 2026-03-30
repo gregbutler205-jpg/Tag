@@ -2,6 +2,7 @@
   "name": "iwonde-tag",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently \"npm run dev\" \"cd server && npm run dev\"",
