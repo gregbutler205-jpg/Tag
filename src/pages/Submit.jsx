@@ -126,7 +126,16 @@ export default function Submit() {
   const [challenging, setChallenging]     = useState(false)
   const fileInputRef  = useRef(null)
   const plateInputRef = useRef(null)
-  const { addPoints, addState } = useStore()
+  const [stateAdded, setStateAdded] = useState(false)
+  const { addPoints, addState, statesCollected } = useStore()
+
+  const logStateOnly = () => {
+    const isNew = !statesCollected.includes(state)
+    addState(state)
+    if (isNew) addPoints(100)
+    setStateAdded(true)
+    setTimeout(() => setStateAdded(false), 3000)
+  }
 
   /* ── OCR ─────────────────────────────────────────────────── */
   const runOcr = async (file) => {
@@ -370,6 +379,32 @@ export default function Submit() {
 
           {/* ── State selector ── */}
           <StateChipPicker value={state} onChange={setState} />
+
+          {/* ── Log state without plate ── */}
+          {state && !plateText.trim() && (
+            <div className="glass-card rounded-xl p-4 flex items-center gap-3">
+              <span className="text-2xl">🗺️</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-bold">
+                  {stateAdded
+                    ? (statesCollected.includes(state) ? `${STATE_NAMES[state]} already in your collection` : `${STATE_NAMES[state]} added! +100 pts`)
+                    : `Spotted a ${STATE_NAMES[state]} plate?`}
+                </p>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  {stateAdded ? 'Keep spotting more states!' : 'Log it now — or enter the plate text above to decode it too'}
+                </p>
+              </div>
+              {!stateAdded && (
+                <button
+                  onClick={logStateOnly}
+                  className="shrink-0 bg-brand-blue hover:brightness-110 text-white text-xs font-black px-3 py-2 rounded-lg transition-all active:scale-95"
+                >
+                  Log State
+                </button>
+              )}
+              {stateAdded && <span className="text-2xl">✅</span>}
+            </div>
+          )}
 
           {/* ── Error ── */}
           {error && (
