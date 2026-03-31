@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { v4 as uuidv4 } from 'uuid'
-import { interpretPlate } from '../lib/openai.js'
+import { interpretPlate, scoreGroupGuesses } from '../lib/openai.js'
 import { requireAuth, optionalAuth } from '../lib/auth.js'
 import supabase from '../lib/supabase.js'
 
@@ -155,6 +155,135 @@ router.post('/:id/challenges/:cid/guess', requireAuth, async (req, res, next) =>
     })
 
     res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// POST /groups/:id/challenges/:cid/reveal — score all guesses + award global points
+router.post('/:id/challenges/:cid/reveal', requireAuth, async (req, res, next) => {
+  try {
+    const { cid } = req.params
+
+    const { data: challenge } = await supabase
+      .from('group_challenges').select('*').eq('id', cid).single()
+    if (!challenge) return res.status(404).json({ error: 'Challenge not found' })
+    if (challenge.revealed) {
+      // Already revealed — just return the scored guesses
+      const { data: existing } = await supabase
+        .from('group_guesses')
+        .select('id, guess, verdict, score, reasoning, user_id, users(display_name)')
+        .eq('challenge_id', cid)
+        .order('score', { ascending: false })
+      return res.json({
+        aiResult: challenge.ai_result,
+        guesses: (existing || []).map(g => ({
+          id: g.id, username: g.users?.display_name || 'Anonymous',
+          guess: g.guess, verdict: g.verdict || 'disagree',
+          score: g.score || 0, reasoning: g.reasoning || '',
+        })),
+      })
+    }
+
+    // Fetch all guesses for this challenge
+    const { data: rawGuesses } = await supabase
+      .from('group_guesses')
+      .select('id, guess, user_id')
+      .eq('challenge_id', cid)
+
+    const guesses = rawGuesses || []
+    const aiResult = challenge.ai_result
+
+    // Batch-score all guesses in one API call
+    const scored = await scoreGroupGuesses(
+      challenge.plate_text,
+      aiResult?.primary || 'Meaning unclear',
+      guesses.map(g => ({ id: g.id, guess: g.guess })),
+      { state: challenge.state }
+    )
+
+    // Build a lookup map
+    const scoreMap = {}
+    for (const s of scored) scoreMap[s.id] = s
+
+    // Update each guess + award global points (full credit)
+    for (const g of guesses) {
+      const s = scoreMap[g.id] || { verdict: 'disagree', bonusPoints: 0, reasoning: '' }
+      const { error: upErr } = await supabase
+        .from('group_guesses')
+        .update({ verdict: s.verdict, score: s.bonusPoints, reasoning: s.reasoning, scored_at: new Date().toISOString() })
+        .eq('id', g.id)
+      if (upErr) console.warn('[group_guesses update]', upErr.message)
+
+      if (s.bonusPoints > 0) {
+        const { error: rpcErr } = await supabase.rpc('add_points', {
+          p_user_id: g.user_id,
+          p_points:  s.bonusPoints,
+        })
+        if (rpcErr) console.warn('[add_points group]', rpcErr.message)
+      }
+    }
+
+    // Mark challenge as revealed
+    const { error: revErr } = await supabase
+      .from('group_challenges').update({ revealed: true }).eq('id', cid)
+    if (revErr) console.warn('[reveal update]', revErr.message)
+
+    // Return final results with usernames
+    const { data: finalGuesses } = await supabase
+      .from('group_guesses')
+      .select('id, guess, verdict, score, reasoning, user_id, users(display_name)')
+      .eq('challenge_id', cid)
+      .order('score', { ascending: false })
+
+    res.json({
+      aiResult,
+      guesses: (finalGuesses || []).map(g => ({
+        id: g.id, username: g.users?.display_name || 'Anonymous',
+        guess: g.guess, verdict: g.verdict || 'disagree',
+        score: g.score || 0, reasoning: g.reasoning || '',
+      })),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /groups/:id/leaderboard — scores within this group
+router.get('/:id/leaderboard', requireAuth, async (req, res, next) => {
+  try {
+    // All challenge IDs for this group
+    const { data: challenges } = await supabase
+      .from('group_challenges').select('id').eq('group_id', req.params.id)
+    const ids = (challenges || []).map(c => c.id)
+    if (!ids.length) return res.json([])
+
+    // All scored guesses for those challenges
+    const { data: guesses } = await supabase
+      .from('group_guesses')
+      .select('user_id, score, verdict, users(display_name)')
+      .in('challenge_id', ids)
+      .not('verdict', 'is', null)
+
+    // Aggregate by user
+    const byUser = {}
+    for (const g of guesses || []) {
+      if (!byUser[g.user_id]) {
+        byUser[g.user_id] = {
+          userId:   g.user_id,
+          username: g.users?.display_name || 'Anonymous',
+          total:    0,
+          correct:  0,
+          guesses:  0,
+        }
+      }
+      byUser[g.user_id].total   += g.score || 0
+      byUser[g.user_id].guesses += 1
+      if (g.verdict === 'agree' || g.verdict === 'partial') byUser[g.user_id].correct += 1
+    }
+
+    const leaderboard = Object.values(byUser).sort((a, b) => b.total - a.total)
+    res.json(leaderboard)
   } catch (err) {
     next(err)
   }

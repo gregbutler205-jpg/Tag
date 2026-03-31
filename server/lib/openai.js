@@ -292,6 +292,72 @@ export async function interpretPlate(plateText, context = {}) {
   }
 }
 
+// ── Batch group guess scoring ─────────────────────────────────────────────────
+/**
+ * scoreGroupGuesses(plateText, aiMeaning, guesses, context)
+ *
+ * Scores all group guesses in a single API call.
+ *
+ * @param {string}   plateText  — the plate being judged
+ * @param {string}   aiMeaning  — the AI's official interpretation
+ * @param {Array}    guesses    — [{ id, guess }]
+ * @param {object}   context    — { state }
+ * @returns {Array}             — [{ id, verdict, bonusPoints, reasoning }]
+ */
+export async function scoreGroupGuesses(plateText, aiMeaning, guesses, context = {}) {
+  if (!guesses.length) return []
+
+  const systemMsg = `You are a fair judge of US vanity license plate interpretations.
+You will receive a plate, the official AI interpretation, and several player guesses.
+Score each player guess independently. Be generous — reward creative but reasonable readings.
+Never endorse crude or offensive meanings.
+Return ONLY valid JSON using this exact shape:
+{
+  "scores": [
+    { "index": 1, "verdict": "agree"|"partial"|"disagree", "score": 75|35|0, "reason": "one sentence" },
+    ...
+  ]
+}
+Verdict guide: "agree" = clearly plausible (75 pts), "partial" = reasonable but uncertain (35 pts), "disagree" = not supported (0 pts)`
+
+  const guessList = guesses.map((g, i) => `${i + 1}. "${g.guess}"`).join('\n')
+
+  const userMsg = `Plate: ${plateText}
+State: ${context.state || 'unknown'}
+Official AI interpretation: "${aiMeaning}"
+
+Player guesses to score:
+${guessList}`
+
+  let raw
+  try {
+    const response = await getGrokClient().chat.completions.create({
+      model:       process.env.INTERPRETATION_MODEL || 'grok-3',
+      messages:    [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+      temperature: 0.2,
+      max_tokens:  400,
+    })
+    const cleaned = response.choices[0].message.content
+      .replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+    raw = JSON.parse(cleaned)
+  } catch {
+    // Fallback: mark all as disagree so the reveal still completes
+    return guesses.map(g => ({ id: g.id, verdict: 'disagree', bonusPoints: 0, reasoning: 'Could not evaluate.' }))
+  }
+
+  return (raw.scores || []).map((s, i) => {
+    const g = guesses[i]
+    if (!g) return null
+    const verdict = ['agree', 'partial', 'disagree'].includes(s.verdict) ? s.verdict : 'disagree'
+    return {
+      id:          g.id,
+      verdict,
+      bonusPoints: verdict === 'agree' ? 75 : verdict === 'partial' ? 35 : 0,
+      reasoning:   s.reason || '',
+    }
+  }).filter(Boolean)
+}
+
 // ── Content moderation ────────────────────────────────────────────────────────
 export async function moderatePlate(plateText) {
   const response = await getClient().moderations.create({ input: plateText })
