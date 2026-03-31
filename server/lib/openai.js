@@ -265,11 +265,10 @@ export async function interpretPlate(plateText, context = {}) {
   const messages = buildMessages(plateText, context)
 
   const response = await getGrokClient().chat.completions.create({
-    model:                 process.env.INTERPRETATION_MODEL || 'grok-4-1-fast',
+    model:                 process.env.INTERPRETATION_MODEL || 'grok-3',
     messages,
-    response_format:       { type: 'json_object' },
     temperature:           0.2,
-    max_completion_tokens: 400,
+    max_tokens:            400,
   })
 
   const raw        = safeParseJSON(response.choices[0].message.content, plateText)
@@ -335,14 +334,13 @@ AI interpretation: ${aiMeaning}
 User interpretation: ${userMeaning}`
 
   const response = await getGrokClient().chat.completions.create({
-    model:                 process.env.INTERPRETATION_MODEL || 'grok-4-1-fast',
+    model:                 process.env.INTERPRETATION_MODEL || 'grok-3',
     messages: [
       { role: 'system', content: systemMsg },
       { role: 'user',   content: userMsg   },
     ],
-    response_format:       { type: 'json_object' },
     temperature:           0.2,
-    max_completion_tokens: 200,
+    max_tokens:            200,
   })
 
   let raw
