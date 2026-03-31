@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 
@@ -34,7 +35,30 @@ function ActionCard({ to, emoji, title, subtitle, accent = false }) {
 }
 
 export default function Home() {
-  const { points, streak, statesCollected } = useStore()
+  const { points, streak, statesCollected, lastSharedDate, recordShare } = useStore()
+  const [shareMsg, setShareMsg] = useState('')
+
+  const alreadySharedToday = lastSharedDate === new Date().toDateString()
+
+  async function handleShare() {
+    const shareData = {
+      title: 'iWonde Tag',
+      text: 'Spot vanity plates, decode their hidden meanings, and compete with friends! 🏷️',
+      url: 'https://tag.iwonde.com',
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`)
+      }
+      const awarded = recordShare()
+      setShareMsg(awarded ? '+50 pts! Thanks for sharing 🎉' : 'Already shared today — come back tomorrow!')
+    } catch {
+      // user cancelled share sheet — no message
+    }
+    setTimeout(() => setShareMsg(''), 3000)
+  }
 
   return (
     <div className="pb-nav px-4 pt-5 space-y-5 max-w-lg mx-auto">
@@ -79,6 +103,23 @@ export default function Home() {
           title="State Collection"
           subtitle={`${statesCollected.length} of 51 collected`}
         />
+
+        {/* Share the App */}
+        <button
+          onClick={handleShare}
+          className={`w-full flex items-center gap-4 rounded-2xl p-4 transition-all active:scale-[0.98] glass-card hover:border-navy-500 ${alreadySharedToday ? 'opacity-60' : ''}`}
+        >
+          <span className="text-3xl w-10 text-center shrink-0">📣</span>
+          <div className="flex-1 min-w-0 text-left">
+            <div className="font-bold text-white">Share the App</div>
+            <div className="text-sm text-slate-500 truncate">
+              {shareMsg || (alreadySharedToday ? 'Shared today — come back tomorrow' : 'Earn +50 pts · once per day')}
+            </div>
+          </div>
+          <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0 text-slate-600">
+            <path d="M13 4.5a2.5 2.5 0 11.702 1.737L6.97 9.604a2.518 2.518 0 010 .792l6.733 3.367a2.5 2.5 0 11-.671 1.341l-6.733-3.367a2.5 2.5 0 110-3.474l6.733-3.366A2.5 2.5 0 0113 4.5z"/>
+          </svg>
+        </button>
       </div>
 
     </div>

@@ -34,10 +34,11 @@ router.post('/register', async (req, res, next) => {
     if (error) return res.status(400).json({ error: error.message })
 
     // Insert into public.users
-    await supabase.from('users').insert({
+    const { error: insertError } = await supabase.from('users').insert({
       id: data.user.id,
       display_name: username.trim(),
-    }).catch(() => {})
+    })
+    if (insertError) console.warn('[register] users insert:', insertError.message)
 
     const token = signToken({ id: data.user.id, email: email.trim(), name: username.trim() })
     res.json({ token, user: { id: data.user.id, email: email.trim(), name: username.trim() } })

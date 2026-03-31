@@ -27,6 +27,14 @@ const useStore = create(
             : 1
         })
       },
+      lastSharedDate: null,
+      recordShare: () => {
+        const today = new Date().toDateString()
+        if (get().lastSharedDate === today) return false
+        set({ lastSharedDate: today })
+        get().addPoints(50)
+        return true
+      },
     }),
     { name: 'iwonde-tag-store' }
   )
