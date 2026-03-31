@@ -4,7 +4,7 @@ import useStore from '../store/useStore'
 
 export default function Header({ logoVisible = true }) {
   const [imgFailed, setImgFailed] = useState(false)
-  const { user } = useStore()
+  const { user, avatarBase64 } = useStore()
 
   return (
     <header
@@ -58,9 +58,17 @@ export default function Header({ logoVisible = true }) {
         {/* Right — Sign In / Profile */}
         <Link to={user ? '/profile' : '/signin'}
           className="flex flex-col items-center gap-0.5 text-slate-400 hover:text-brand-yellow transition-colors w-12 shrink-0">
-          <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-            <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd"/>
-          </svg>
+          {avatarBase64 ? (
+            <img
+              src={avatarBase64}
+              alt="avatar"
+              className="w-7 h-7 rounded-full object-cover border-2 border-brand-yellow/60"
+            />
+          ) : (
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+              <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd"/>
+            </svg>
+          )}
           <span className="text-[9px] font-semibold uppercase tracking-wide">
             {user ? 'Profile' : 'Sign In'}
           </span>

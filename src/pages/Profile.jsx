@@ -1,7 +1,29 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { RARITY } from '../lib/rarityConfig'
 import BackButton from '../components/BackButton'
+
+function compressToBase64(file, size = 160) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = size
+      canvas.height = size
+      const ctx = canvas.getContext('2d')
+      // Center-crop to square
+      const min = Math.min(img.width, img.height)
+      const sx = (img.width  - min) / 2
+      const sy = (img.height - min) / 2
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.75))
+    }
+    img.src = url
+  })
+}
 
 const RANK_TIERS = [
   { min: 0,      label: 'Rookie',      color: 'text-slate-400',  icon: '🔰' },
@@ -25,9 +47,17 @@ const RARITY_COLORS = {
 }
 
 export default function Profile() {
-  const { user, points, streak, statesCollected, logout } = useStore()
+  const { user, points, streak, statesCollected, logout, avatarBase64, setAvatar } = useStore()
   const rank = getRank(points)
   const initials = user?.name?.slice(0, 2).toUpperCase() || '??'
+  const fileRef = useRef(null)
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const b64 = await compressToBase64(file)
+    setAvatar(b64)
+  }
 
   return (
     <div className="pb-nav px-4 pt-3 space-y-4 max-w-lg mx-auto">
@@ -41,16 +71,59 @@ export default function Profile() {
       {/* Avatar card */}
       <div className="glass-card rounded-2xl p-6 text-center space-y-3">
         <div className="relative inline-block">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-blue to-brand-blue-dark flex items-center justify-center text-3xl font-black text-white mx-auto shadow-glow">
-            {initials}
-          </div>
+          {/* Hidden file input */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
+          {/* Avatar circle — tap to change */}
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="relative w-20 h-20 rounded-full mx-auto block overflow-hidden shadow-glow focus:outline-none group"
+            title="Tap to change photo"
+          >
+            {avatarBase64 ? (
+              <img src={avatarBase64} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-brand-blue to-brand-blue-dark flex items-center justify-center text-3xl font-black text-white">
+                {initials}
+              </div>
+            )}
+            {/* Camera overlay on hover/tap */}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7">
+                <path d="M12 9a3.75 3.75 0 100 7.5A3.75 3.75 0 0012 9z"/>
+                <path fillRule="evenodd" d="M9.344 3.071a49.52 49.52 0 015.312 0c.967.052 1.83.585 2.332 1.39l.821 1.317c.24.383.645.643 1.11.71.386.054.77.113 1.152.177 1.432.239 2.429 1.493 2.429 2.909V18a3 3 0 01-3 3h-15a3 3 0 01-3-3V9.574c0-1.416.997-2.67 2.429-2.909.382-.064.766-.123 1.151-.178a1.56 1.56 0 001.11-.71l.822-1.315a2.942 2.942 0 012.332-1.39zM6.75 12.75a5.25 5.25 0 1110.5 0 5.25 5.25 0 01-10.5 0zM12 10.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" clipRule="evenodd"/>
+              </svg>
+            </div>
+          </button>
           <span className="absolute -bottom-1 -right-1 text-xl">{rank.icon}</span>
+          {/* Edit badge */}
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="absolute -top-1 -right-1 w-6 h-6 bg-brand-yellow rounded-full flex items-center justify-center shadow-md"
+            title="Change photo"
+          >
+            <svg viewBox="0 0 20 20" fill="#0c1628" className="w-3.5 h-3.5">
+              <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"/>
+              <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"/>
+            </svg>
+          </button>
         </div>
         <div>
           <div className="text-xl font-bold text-white">{user?.name || 'Guest Player'}</div>
           <div className={`text-sm font-semibold ${rank.color}`}>{rank.label}</div>
           <div className="text-slate-500 text-xs mt-0.5">{user?.email || 'Not signed in'}</div>
         </div>
+        {avatarBase64 && (
+          <button onClick={() => setAvatar(null)}
+            className="text-slate-600 hover:text-slate-400 text-xs font-semibold transition-colors -mt-1">
+            Remove photo
+          </button>
+        )}
         {!user ? (
           <Link to="/signin"
             className="inline-block bg-brand-blue hover:bg-brand-blue-light text-white font-bold px-8 py-2.5 rounded-xl transition-all shadow-glow">

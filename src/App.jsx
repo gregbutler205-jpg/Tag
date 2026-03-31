@@ -3,6 +3,8 @@ import { Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
 import NavBar from './components/NavBar'
 import SplashScreen from './components/SplashScreen'
+import WelcomeModal from './components/WelcomeModal'
+import useStore from './store/useStore'
 import Home from './pages/Home'
 import Submit from './pages/Submit'
 import Daily from './pages/Daily'
@@ -17,6 +19,7 @@ import SignIn from './pages/SignIn'
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
+  const { hasSeenWelcome } = useStore()
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#04080f' }}>
@@ -49,6 +52,9 @@ export default function App() {
       {!splashDone && (
         <SplashScreen onComplete={() => setSplashDone(true)} />
       )}
+
+      {/* Welcome modal — shown once on first ever visit */}
+      {splashDone && !hasSeenWelcome && <WelcomeModal />}
     </div>
   )
 }
