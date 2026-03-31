@@ -35,10 +35,8 @@ function ActionCard({ to, emoji, title, subtitle, accent = false }) {
 }
 
 export default function Home() {
-  const { points, streak, statesCollected, lastSharedDate, recordShare } = useStore()
+  const { points, streak, statesCollected, hasEverShared, recordShare } = useStore()
   const [shareMsg, setShareMsg] = useState('')
-
-  const alreadySharedToday = lastSharedDate === new Date().toDateString()
 
   async function handleShare() {
     const shareData = {
@@ -52,8 +50,8 @@ export default function Home() {
       } else {
         await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`)
       }
-      const awarded = recordShare()
-      setShareMsg(awarded ? '+50 pts! Thanks for sharing 🎉' : 'Already shared today — come back tomorrow!')
+      const result = recordShare()
+      setShareMsg(result === 'first' ? '+50 pts! Thanks for sharing 🎉' : 'Thanks for spreading the word! 🎉')
     } catch {
       // user cancelled share sheet — no message
     }
@@ -107,13 +105,13 @@ export default function Home() {
         {/* Share the App */}
         <button
           onClick={handleShare}
-          className={`w-full flex items-center gap-4 rounded-2xl p-4 transition-all active:scale-[0.98] glass-card hover:border-navy-500 ${alreadySharedToday ? 'opacity-60' : ''}`}
+          className="w-full flex items-center gap-4 rounded-2xl p-4 transition-all active:scale-[0.98] glass-card hover:border-navy-500"
         >
           <span className="text-3xl w-10 text-center shrink-0">📣</span>
           <div className="flex-1 min-w-0 text-left">
             <div className="font-bold text-white">Share the App</div>
             <div className="text-sm text-slate-500 truncate">
-              {shareMsg || (alreadySharedToday ? 'Shared today — come back tomorrow' : 'Earn +50 pts · once per day')}
+              {shareMsg || (hasEverShared ? 'Share with friends anytime' : 'Earn +50 pts on your first share')}
             </div>
           </div>
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0 text-slate-600">

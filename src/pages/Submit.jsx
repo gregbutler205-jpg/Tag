@@ -1,11 +1,114 @@
 import { useState, useRef } from 'react'
-import { STATES } from '../lib/rarityConfig'
+import { STATES, STATE_NAMES } from '../lib/rarityConfig'
 import PlateCard from '../components/PlateCard'
 import useStore from '../store/useStore'
 import api from '../lib/api'
 import BackButton from '../components/BackButton'
 
 const MODES = { camera: 'camera', manual: 'manual' }
+
+/* ── State chip-grid picker ─────────────────────────────────────── */
+function StateChipPicker({ value, onChange }) {
+  const [open, setOpen]       = useState(false)
+  const [search, setSearch]   = useState('')
+
+  const filtered = search.trim()
+    ? STATES.filter(s =>
+        s.toLowerCase().includes(search.toLowerCase()) ||
+        STATE_NAMES[s].toLowerCase().includes(search.toLowerCase())
+      )
+    : STATES
+
+  function select(s) {
+    onChange(s)
+    setOpen(false)
+    setSearch('')
+  }
+
+  function clear(e) {
+    e.stopPropagation()
+    onChange('')
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs text-slate-500 uppercase tracking-wide font-semibold">
+        State <span className="normal-case text-slate-600">(optional)</span>
+      </label>
+
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full glass-card border-navy-600 rounded-xl px-4 py-3 flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-brand-blue"
+      >
+        <span className={value ? 'text-white font-semibold' : 'text-slate-500'}>
+          {value ? `${value} — ${STATE_NAMES[value]}` : 'Unknown / Not sure'}
+        </span>
+        <span className="flex items-center gap-2">
+          {value && (
+            <span
+              onClick={clear}
+              className="text-slate-500 hover:text-red-400 text-lg leading-none transition-colors"
+              role="button"
+            >✕</span>
+          )}
+          <svg viewBox="0 0 20 20" fill="currentColor"
+            className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+            <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clipRule="evenodd"/>
+          </svg>
+        </span>
+      </button>
+
+      {/* Expanded chip grid */}
+      {open && (
+        <div className="glass-card rounded-xl p-3 space-y-3 border border-navy-500">
+          {/* Search filter */}
+          <input
+            autoFocus
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search state…"
+            className="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+          />
+
+          {/* Chip grid */}
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+            {filtered.map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => select(s)}
+                title={STATE_NAMES[s]}
+                className={`rounded-lg py-2 text-xs font-black tracking-wide transition-all active:scale-95 ${
+                  value === s
+                    ? 'bg-brand-blue text-white shadow-glow'
+                    : 'bg-navy-900 text-slate-400 hover:bg-navy-700 hover:text-white border border-navy-700'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="col-span-6 text-center text-slate-600 text-xs py-2">No states match</p>
+            )}
+          </div>
+
+          {/* Unknown option */}
+          <button
+            type="button"
+            onClick={() => { onChange(''); setOpen(false); setSearch('') }}
+            className={`w-full py-2 rounded-lg text-xs font-semibold transition-all ${
+              !value ? 'bg-brand-blue text-white' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            Unknown / Not sure
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Submit() {
   const [mode, setMode]           = useState(MODES.camera)
@@ -266,19 +369,7 @@ export default function Submit() {
           </div>
 
           {/* ── State selector ── */}
-          <div className="space-y-2">
-            <label className="text-xs text-slate-500 uppercase tracking-wide font-semibold">
-              State <span className="normal-case text-slate-600">(optional)</span>
-            </label>
-            <select
-              value={state}
-              onChange={e => setState(e.target.value)}
-              className="w-full glass-card border-navy-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-blue appearance-none"
-            >
-              <option value="">Unknown / Not sure</option>
-              {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
+          <StateChipPicker value={state} onChange={setState} />
 
           {/* ── Error ── */}
           {error && (

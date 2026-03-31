@@ -2,7 +2,7 @@ import BackButton from '../components/BackButton'
 
 const TOPICS = [
   { id: 'getting-started',  label: 'Getting Started',         emoji: '🚀' },
-  { id: 'scan-a-tag',       label: 'Scan a Tag',              emoji: '📸' },
+  { id: 'scan-a-tag',       label: 'Submit a Tag',            emoji: '📸' },
   { id: 'beat-ai',          label: 'Can You Beat AI?',        emoji: '🏆' },
   { id: 'tag-of-the-day',   label: 'Tag of the Day',          emoji: '🏷️' },
   { id: 'groups',           label: 'Groups',                  emoji: '👥' },
@@ -50,8 +50,8 @@ export default function Help() {
         <Step n={3} text="To sign in on another device, tap Sign In and enter your username." />
       </Section>
 
-      {/* ── Scan a Tag ───────────────────────────────────── */}
-      <Section id="scan-a-tag" title="Scan a Tag" emoji="📸">
+      {/* ── Submit a Tag ─────────────────────────────────── */}
+      <Section id="scan-a-tag" title="Submit a Tag" emoji="📸">
         <P>The main way to earn points. When you spot a vanity plate on the road, submit it and let the AI decode it.</P>
         <Step n={1} text='Tap "Submit a Plate" from the home screen.' />
         <Step n={2} text="Take a photo or upload one from your camera roll. The AI will automatically read the plate text using OCR." />

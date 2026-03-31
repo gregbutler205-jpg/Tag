@@ -31,13 +31,15 @@ const useStore = create(
             : 1
         })
       },
-      lastSharedDate: null,
+      hasEverShared: false,
       recordShare: () => {
-        const today = new Date().toDateString()
-        if (get().lastSharedDate === today) return false
-        set({ lastSharedDate: today })
-        get().addPoints(50)
-        return true
+        // Award 50 pts on the very first share; sharing always works after that
+        if (!get().hasEverShared) {
+          set({ hasEverShared: true })
+          get().addPoints(50)
+          return 'first'   // caller can show "+50 pts" message
+        }
+        return 'shared'    // caller can show a plain "Thanks!" message
       },
     }),
     { name: 'iwonde-tag-store' }

@@ -36,7 +36,7 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
 
     // Save to DB if user is authenticated
     if (req.user?.id) {
-      await supabase.from('plates').insert({
+      const { error: insertErr } = await supabase.from('plates').insert({
         text: plateUpper,
         state: state || null,
         rarity: result.rarity,
@@ -46,14 +46,16 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
         difficulty: result.difficulty,
         submitted_by: req.user.id,
         has_photo: !!hasPhoto,
-      }).catch(() => {}) // Non-fatal
+      })
+      if (insertErr) console.warn('[plates/insert]', insertErr.message)
 
       if (state) {
-        await supabase.from('state_collection').upsert({
+        const { error: upsertErr } = await supabase.from('state_collection').upsert({
           user_id: req.user.id,
           state,
           first_seen: new Date().toISOString(),
-        }, { onConflict: 'user_id,state', ignoreDuplicates: true }).catch(() => {})
+        }, { onConflict: 'user_id,state', ignoreDuplicates: true })
+        if (upsertErr) console.warn('[state_collection/upsert]', upsertErr.message)
       }
     }
 
@@ -79,10 +81,11 @@ router.post('/challenge', optionalAuth, async (req, res, next) => {
 
     // Award bonus points to authenticated user
     if (req.user?.id && judgment.bonusPoints > 0) {
-      await supabase.rpc('add_points', {
+      const { error: rpcErr } = await supabase.rpc('add_points', {
         p_user_id: req.user.id,
         p_points:  judgment.bonusPoints,
-      }).catch(() => {})
+      })
+      if (rpcErr) console.warn('[add_points rpc]', rpcErr.message)
     }
 
     res.json(judgment)
