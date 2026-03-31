@@ -6,6 +6,7 @@ const useStore = create(
     (set, get) => ({
       user: null,
       setUser: (user) => set({ user }),
+      logout: () => { localStorage.removeItem('token'); set({ user: null }) },
       points: 0,
       addPoints: (n) => set((s) => ({ points: s.points + n })),
       statesCollected: [],

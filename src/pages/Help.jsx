@@ -2,7 +2,8 @@ export default function Help() {
   return (
     <div className="pb-nav px-4 pt-3 max-w-lg mx-auto space-y-6">
 
-      <div className="pt-4">
+      <div className="pt-2"><BackButton to="/" /></div>
+      <div className="pt-2">
         <h1 className="text-2xl font-black text-white">How to Play</h1>
         <p className="text-slate-500 text-sm">Everything you need to know about iWonde Tag</p>
       </div>

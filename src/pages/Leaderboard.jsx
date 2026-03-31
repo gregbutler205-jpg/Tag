@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../lib/api'
+import BackButton from '../components/BackButton'
 
 const TABS = [
   { key: 'all',    label: 'All Time' },
@@ -57,7 +58,8 @@ export default function Leaderboard() {
     <div className="pb-nav px-4 pt-3 space-y-5 max-w-lg mx-auto">
 
       {/* Header */}
-      <div className="pt-4">
+      <div className="pt-2"><BackButton to="/" /></div>
+      <div className="pt-2">
         <h1 className="text-2xl font-black text-white">Leaderboard</h1>
         <p className="text-slate-500 text-sm">Top decoders worldwide</p>
       </div>

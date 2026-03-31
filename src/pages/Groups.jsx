@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
+import BackButton from '../components/BackButton'
 
 const DEMO_GROUPS = [
   { id: '1', name: 'Road Trip Squad', memberCount: 4, activeChallenges: 2, code: 'TRIP42' },
@@ -59,7 +60,8 @@ export default function Groups() {
     <div className="pb-nav px-4 pt-3 space-y-4 max-w-lg mx-auto">
 
       {/* Header */}
-      <div className="pt-4 flex items-center justify-between">
+      <div className="pt-2"><BackButton to="/" /></div>
+      <div className="pt-2 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-white">Group Challenges</h1>
           <p className="text-slate-500 text-sm">Compete blind with friends</p>

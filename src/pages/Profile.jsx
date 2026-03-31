@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { RARITY } from '../lib/rarityConfig'
+import BackButton from '../components/BackButton'
 
 const RANK_TIERS = [
   { min: 0,      label: 'Rookie',      color: 'text-slate-400',  icon: '🔰' },
@@ -23,15 +25,16 @@ const RARITY_COLORS = {
 }
 
 export default function Profile() {
-  const { user, points, streak, statesCollected } = useStore()
+  const { user, points, streak, statesCollected, logout } = useStore()
   const rank = getRank(points)
   const initials = user?.name?.slice(0, 2).toUpperCase() || '??'
 
   return (
     <div className="pb-nav px-4 pt-3 space-y-4 max-w-lg mx-auto">
 
+      <div className="pt-2"><BackButton to="/" /></div>
       {/* Header */}
-      <div className="pt-4">
+      <div className="pt-2">
         <h1 className="text-2xl font-black text-white">Profile</h1>
       </div>
 
@@ -48,9 +51,15 @@ export default function Profile() {
           <div className={`text-sm font-semibold ${rank.color}`}>{rank.label}</div>
           <div className="text-slate-500 text-xs mt-0.5">{user?.email || 'Not signed in'}</div>
         </div>
-        {!user && (
-          <button className="bg-brand-blue hover:bg-brand-blue-light text-white font-bold px-8 py-2.5 rounded-xl transition-all shadow-glow">
+        {!user ? (
+          <Link to="/signin"
+            className="inline-block bg-brand-blue hover:bg-brand-blue-light text-white font-bold px-8 py-2.5 rounded-xl transition-all shadow-glow">
             Sign In / Create Account
+          </Link>
+        ) : (
+          <button onClick={logout}
+            className="text-slate-500 hover:text-red-400 text-sm font-semibold transition-colors mt-1">
+            Sign Out
           </button>
         )}
       </div>
@@ -107,6 +116,12 @@ export default function Profile() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Footer links */}
+      <div className="flex justify-center gap-6 pb-2">
+        <Link to="/privacy" className="text-slate-600 text-xs hover:text-slate-400 transition-colors">Privacy Policy</Link>
+        <Link to="/help" className="text-slate-600 text-xs hover:text-slate-400 transition-colors">How to Play</Link>
       </div>
 
     </div>

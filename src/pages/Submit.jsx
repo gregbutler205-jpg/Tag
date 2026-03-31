@@ -3,6 +3,7 @@ import { STATES } from '../lib/rarityConfig'
 import PlateCard from '../components/PlateCard'
 import useStore from '../store/useStore'
 import api from '../lib/api'
+import BackButton from '../components/BackButton'
 
 const MODES = { camera: 'camera', manual: 'manual' }
 
@@ -112,7 +113,8 @@ export default function Submit() {
     <div className="pb-nav px-4 pt-3 space-y-4 max-w-lg mx-auto">
 
       {/* Page header */}
-      <div className="pt-4 flex items-center justify-between">
+      <div className="pt-2"><BackButton to="/" /></div>
+      <div className="pt-2 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-white">Submit a Plate</h1>
           <p className="text-slate-500 text-sm">Take a photo or type it in</p>

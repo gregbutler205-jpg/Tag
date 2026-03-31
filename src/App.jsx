@@ -12,6 +12,8 @@ import Collection from './pages/Collection'
 import Leaderboard from './pages/Leaderboard'
 import Profile from './pages/Profile'
 import Help from './pages/Help'
+import Privacy from './pages/Privacy'
+import SignIn from './pages/SignIn'
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
@@ -37,6 +39,8 @@ export default function App() {
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile"    element={<Profile />} />
           <Route path="/help"       element={<Help />} />
+          <Route path="/privacy"    element={<Privacy />} />
+          <Route path="/signin"     element={<SignIn />} />
         </Routes>
         <NavBar />
       </div>
