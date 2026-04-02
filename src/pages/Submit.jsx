@@ -224,6 +224,14 @@ export default function Submit() {
   return (
     <div className="pb-nav px-4 pt-3 space-y-4 max-w-lg mx-auto">
 
+      {/* Safety banner */}
+      <div className="flex items-center gap-2.5 bg-red-950/50 border border-red-800/50 rounded-xl px-3 py-2.5">
+        <span className="text-base shrink-0">🚗⚠️</span>
+        <p className="text-red-300 text-xs font-semibold leading-snug">
+          Passengers only. Never submit a plate while driving — pull over safely first.
+        </p>
+      </div>
+
       {/* Page header */}
       <div className="pt-2"><BackButton to="/" /></div>
       <div className="pt-2 flex items-center justify-between">

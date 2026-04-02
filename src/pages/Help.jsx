@@ -13,6 +13,7 @@ const TOPICS = [
   { id: 'leaderboard',      label: 'Leaderboard',             emoji: '📊' },
   { id: 'sharing',          label: 'Sharing & Bonus Points',  emoji: '📣' },
   { id: 'tips',             label: 'Tips for High Scores',    emoji: '💡' },
+  { id: 'safety',          label: 'Safety & Driving',        emoji: '🚗' },
 ]
 
 export default function Help() {
@@ -181,6 +182,33 @@ export default function Help() {
         <Step n={5} text="Keep a group active — group challenges are a fast way to earn points on the go." />
         <Step n={6} text="Share the app daily for an extra 50 points — takes 5 seconds." />
       </Section>
+
+      {/* ── Safety & Driving ─────────────────────────────────── */}
+      <div id="safety" className="rounded-2xl p-5 space-y-3 scroll-mt-4 border-2 border-red-800/50 bg-red-950/30">
+        <h2 className="text-lg font-black text-red-300 flex items-center gap-2">
+          🚗 Safety &amp; Driving
+        </h2>
+        <div className="bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-3">
+          <p className="text-red-200 text-sm font-bold leading-relaxed">
+            Never use iWonde Tag while operating a vehicle.
+          </p>
+          <p className="text-red-300/80 text-sm leading-relaxed mt-1">
+            iWonde Tag is designed to be used by <strong>passengers</strong>, or by drivers
+            who have safely pulled over and parked. Submitting plates, guessing, or
+            browsing the app while driving is dangerous and illegal in many states.
+          </p>
+        </div>
+        <P>If you spot a vanity plate you want to submit:</P>
+        <Step n={1} text="Note the plate text and state mentally, or ask a passenger to note it." />
+        <Step n={2} text="Wait until you are safely parked before opening the app." />
+        <Step n={3} text="Never hold your phone up to photograph a plate while driving." />
+        <p className="text-red-300/60 text-xs leading-relaxed mt-1">
+          iWonde, LLC is not responsible for any accidents, injuries, traffic violations,
+          or other consequences resulting from distracted or unsafe use of this app.
+          By using iWonde Tag you agree to use it responsibly and in compliance with
+          all applicable traffic laws.
+        </p>
+      </div>
 
       <p className="text-center text-slate-600 text-xs pb-4">iWonde Tag · Decode. Collect. Compete.</p>
     </div>

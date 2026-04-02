@@ -56,6 +56,23 @@ export default function WelcomeModal() {
                 interpretation. Earn points, collect all 50 states, and compete on the global leaderboard.
               </p>
 
+              {/* Safety warning */}
+              <div className="text-left rounded-2xl border-2 border-red-700/60 bg-red-950/40 px-4 py-3 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🚗⚠️</span>
+                  <span className="text-red-300 font-black text-sm uppercase tracking-wide">Safety First</span>
+                </div>
+                <p className="text-red-200 text-sm leading-relaxed">
+                  <strong>Never use this app while driving.</strong> iWonde Tag is designed
+                  for <strong>passengers</strong> and players who are safely parked.
+                </p>
+                <p className="text-red-300/70 text-xs leading-relaxed">
+                  If you spot a plate you want to submit, pull over safely before using the app.
+                  iWonde, LLC is not responsible for any accidents or injuries resulting from
+                  distracted driving.
+                </p>
+              </div>
+
               {/* Feature cards */}
               <div className="space-y-2 text-left">
                 {[
