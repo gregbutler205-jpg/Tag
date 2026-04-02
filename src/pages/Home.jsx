@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
+import SafetyBanner from '../components/SafetyBanner'
 
 function StatCard({ icon, value, label }) {
   return (
@@ -59,8 +60,10 @@ export default function Home() {
   }
 
   return (
-    <div className="pb-nav px-4 pt-5 space-y-5 max-w-lg mx-auto">
+    <div className="pb-nav max-w-lg mx-auto">
+      <SafetyBanner />
 
+      <div className="px-4 pt-5 space-y-5">
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard icon="⭐" value={points.toLocaleString()} label="Points" />
@@ -120,6 +123,7 @@ export default function Home() {
         </button>
       </div>
 
+      </div>
     </div>
   )
 }

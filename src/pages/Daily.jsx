@@ -3,6 +3,7 @@ import PlateCard from '../components/PlateCard'
 import useStore from '../store/useStore'
 import api from '../lib/api'
 import BackButton from '../components/BackButton'
+import SafetyBanner from '../components/SafetyBanner'
 
 export default function Daily() {
   const [daily, setDaily]         = useState(null)
@@ -50,8 +51,10 @@ export default function Daily() {
   }
 
   return (
-    <div className="pb-nav px-4 pt-3 space-y-4 max-w-lg mx-auto">
+    <div className="pb-nav max-w-lg mx-auto">
+      <SafetyBanner />
 
+      <div className="px-4 pt-3 space-y-4">
       {/* Header */}
       <div className="pt-2"><BackButton to="/" /></div>
       <div className="pt-2 flex items-start justify-between">
@@ -142,6 +145,7 @@ export default function Daily() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -1,15 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export default function SplashScreen({ onComplete }) {
   // in → hold → out → gone
-  const [phase, setPhase] = useState('in')
+  const [phase, setPhase]       = useState('in')
+  const [imgError, setImgError] = useState(false)
 
+  // Keep a stable ref to onComplete so App re-renders don't restart timers
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => { onCompleteRef.current = onComplete })
+
+  // Run once — never re-run even if parent re-renders
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('hold'), 600)   // fade-in complete
-    const t2 = setTimeout(() => setPhase('out'),  2100)  // hold 1.5s, then fade out
-    const t3 = setTimeout(() => { setPhase('gone'); onComplete?.() }, 2900)
-    return () => [t1, t2, t3].forEach(clearTimeout)
-  }, [onComplete])
+    const t1 = setTimeout(() => setPhase('hold'), 600)
+    const t2 = setTimeout(() => setPhase('out'),  2100)
+    const t3 = setTimeout(() => {
+      setPhase('gone')
+      onCompleteRef.current?.()
+    }, 2900)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (phase === 'gone') return null
 
@@ -19,14 +28,14 @@ export default function SplashScreen({ onComplete }) {
     <div className="fixed inset-0 flex items-center justify-center"
       style={{ zIndex: 200, pointerEvents: isOut ? 'none' : 'all' }}>
 
-      {/* Background — matches splash logo bg */}
+      {/* Background */}
       <div className="absolute inset-0" style={{
         background: 'radial-gradient(ellipse at center, #0d1f3c 0%, #04080f 75%)',
         opacity: isOut ? 0 : 1,
         transition: isOut ? 'opacity 0.8s ease' : 'opacity 0.5s ease',
       }} />
 
-      {/* Logo */}
+      {/* Logo / fallback */}
       <div style={{
         position: 'relative',
         zIndex: 1,
@@ -38,11 +47,26 @@ export default function SplashScreen({ onComplete }) {
           ? 'opacity 0.75s ease'
           : undefined,
       }}>
-        <img
-          src="/logo-splash.png"
-          alt="iWonde Tag"
-          style={{ height: '220px', width: 'auto', display: 'block' }}
-        />
+        {!imgError ? (
+          <img
+            src="/logo-splash.png"
+            alt="iWonde Tag"
+            style={{ height: '220px', width: 'auto', display: 'block' }}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          /* Text fallback when image fails to load */
+          <div className="text-center px-8">
+            <div className="text-6xl mb-3">🏷️</div>
+            <div className="flex items-baseline gap-2 justify-center select-none">
+              <span className="text-white font-extrabold text-4xl tracking-tight">iWonde</span>
+              <span className="font-black text-5xl tracking-widest"
+                style={{ color: '#f59e0b', textShadow: '0 0 24px rgba(245,158,11,0.6)' }}>
+                TAG
+              </span>
+            </div>
+          </div>
+        )}
 
         <p className="text-center text-xs font-bold tracking-[0.2em] uppercase mt-5 select-none"
           style={{ color: '#f59e0b', letterSpacing: '0.22em' }}>

@@ -15,16 +15,20 @@ router.get('/', async (req, res, next) => {
   try {
     const { period = 'all' } = req.query
 
-    let query = supabase.from('users').select('id, display_name, total_points, streak').order('total_points', { ascending: false }).limit(50)
+    const { data } = await supabase
+      .from('users')
+      .select('id, display_name, total_points, streak')
+      .gt('total_points', 0)
+      .order('total_points', { ascending: false })
+      .limit(50)
 
-    const { data } = await query
     if (!data?.length) return res.json(FALLBACK)
 
     res.json(data.map((u, i) => ({
-      rank: i + 1,
-      name: u.display_name,
-      points: u.total_points,
-      streak: u.streak,
+      rank:   i + 1,
+      name:   u.display_name || 'Anonymous',
+      points: u.total_points || 0,
+      streak: u.streak       || 0,
     })))
   } catch {
     res.json(FALLBACK)

@@ -26,6 +26,12 @@ function PodiumCard({ entry, pos }) {
     'bg-gradient-to-b from-slate-400/20 to-slate-700/20 border-slate-500/40',
     'bg-gradient-to-b from-orange-600/20 to-orange-900/20 border-orange-700/40',
   ]
+  if (!entry) return (
+    <div className={`flex flex-col items-center gap-2 flex-1 ${pos === 0 ? 'mt-0' : 'mt-4'}`}>
+      <div className="text-3xl opacity-20">{MEDALS[pos]}</div>
+      <div className={`w-full rounded-t-xl border border-dashed border-navy-600 opacity-30 ${heights[pos]}`} />
+    </div>
+  )
   return (
     <div className={`flex flex-col items-center gap-2 flex-1 ${pos === 0 ? 'mt-0' : 'mt-4'}`}>
       <div className="text-3xl">{MEDALS[pos]}</div>
@@ -89,36 +95,34 @@ export default function Leaderboard() {
         </div>
       ) : (
         <>
-          {/* Podium */}
-          {top3.length === 3 && (
+          {/* Podium — always show with up to 3 slots, empty slots are ghosted */}
+          {entries.length > 0 && (
             <div className="glass-card rounded-2xl p-4 pt-2">
               <div className="flex items-end gap-2">
-                <PodiumCard entry={top3[1]} pos={1} />
-                <PodiumCard entry={top3[0]} pos={0} />
-                <PodiumCard entry={top3[2]} pos={2} />
+                <PodiumCard entry={top3[1] || null} pos={1} />
+                <PodiumCard entry={top3[0] || null} pos={0} />
+                <PodiumCard entry={top3[2] || null} pos={2} />
               </div>
             </div>
           )}
 
-          {/* Rest of list */}
+          {/* Ranks 4+ */}
           {rest.length > 0 && (
             <div className="space-y-2">
               {rest.map((e, i) => (
-                <div
-                  key={e.rank || i + 4}
-                  className="glass-card rounded-xl px-4 py-3 flex items-center gap-4"
-                >
+                <div key={e.rank || i + 4}
+                  className="glass-card rounded-xl px-4 py-3 flex items-center gap-4">
                   <span className="text-slate-500 font-bold w-6 text-sm text-center">
                     #{e.rank || i + 4}
                   </span>
                   <div className="flex-1">
                     <div className="font-semibold text-sm text-white">{e.name}</div>
                     <div className="text-xs text-slate-500">
-                      🔥 {e.streak}d streak · 🗺️ {e.states || '?'} states
+                      🔥 {e.streak || 0}d streak
                     </div>
                   </div>
                   <div className="text-brand-yellow font-bold text-sm">
-                    {e.points?.toLocaleString()}
+                    {(e.points || 0).toLocaleString()}
                   </div>
                 </div>
               ))}
@@ -128,8 +132,8 @@ export default function Leaderboard() {
           {entries.length === 0 && (
             <div className="text-center py-16 text-slate-500">
               <div className="text-4xl mb-3">🏆</div>
-              <div className="font-semibold">No entries yet</div>
-              <div className="text-sm mt-1">Be the first to submit a plate!</div>
+              <div className="font-semibold text-white">No scores yet</div>
+              <div className="text-sm mt-1">Sign in and submit plates to appear here!</div>
             </div>
           )}
         </>
