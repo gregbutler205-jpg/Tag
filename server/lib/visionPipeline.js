@@ -93,7 +93,6 @@ async function callVision(imageBase64, model, detail, useReasoning = false) {
         { type: 'text', text: PLATE_PROMPT },
       ],
     }],
-    response_format: { type: 'json_object' },
     max_completion_tokens: 200,
   }
 
@@ -102,7 +101,10 @@ async function callVision(imageBase64, model, detail, useReasoning = false) {
   }
 
   const response = await getClient().chat.completions.create(params)
-  return JSON.parse(response.choices[0].message.content)
+  const raw = response.choices[0].message.content
+  // Strip markdown fences if present (```json ... ```)
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+  return JSON.parse(cleaned)
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────

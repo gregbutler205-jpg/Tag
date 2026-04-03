@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { STATES, STATE_NAMES } from '../lib/rarityConfig'
 import PlateCard from '../components/PlateCard'
 import useStore from '../store/useStore'
@@ -112,9 +113,15 @@ function StateChipPicker({ value, onChange }) {
 }
 
 export default function Submit() {
+  const [searchParams] = useSearchParams()
   const [mode, setMode]           = useState(MODES.camera)
   const [plateText, setPlateText] = useState('')
-  const [state, setState]         = useState('')
+  const [state, setState]         = useState(searchParams.get('state') || '')
+
+  useEffect(() => {
+    const s = searchParams.get('state')
+    if (s) setState(s)
+  }, [])
   const [loading, setLoading]     = useState(false)
   const [result, setResult]       = useState(null)
   const [error, setError]         = useState(null)

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useStore from '../store/useStore'
 import BackButton from '../components/BackButton'
 
@@ -24,14 +26,16 @@ const REGIONS = {
   'West':      ['CO','UT','WY','MT','ID','NV','CA','OR','WA','AK','HI'],
 }
 
-function StateChip({ abbr, collected }) {
+function StateChip({ abbr, collected, onClick }) {
   return (
-    <div
+    <button
+      type="button"
       title={STATE_NAMES[abbr]}
-      className={`relative rounded-lg p-2 text-center text-xs font-bold transition-all cursor-default ${
+      onClick={() => onClick(abbr)}
+      className={`relative rounded-lg p-2 text-center text-xs font-bold transition-all active:scale-95 ${
         collected
           ? 'bg-brand-blue text-white shadow-glow'
-          : 'bg-navy-800 text-navy-500 border border-navy-600'
+          : 'bg-navy-800 text-navy-500 border border-navy-600 hover:border-brand-blue hover:text-slate-300'
       }`}
     >
       {collected && (
@@ -40,13 +44,39 @@ function StateChip({ abbr, collected }) {
         </span>
       )}
       {abbr}
-    </div>
+    </button>
   )
 }
 
 export default function Collection() {
-  const { statesCollected } = useStore()
+  const { statesCollected, addState, addPoints } = useStore()
+  const navigate = useNavigate()
+  const [selected, setSelected] = useState(null)
+  const [justLogged, setJustLogged]   = useState(null)
   const pct = Math.round((statesCollected.length / ALL_STATES.length) * 100)
+
+  function handleChip(abbr) {
+    if (statesCollected.includes(abbr)) {
+      setSelected(abbr)   // show "already collected" info
+    } else {
+      setSelected(abbr)   // show log/submit prompt
+    }
+  }
+
+  function logState() {
+    addState(selected)
+    addPoints(100)
+    setJustLogged(selected)
+    setSelected(null)
+    setTimeout(() => setJustLogged(null), 3000)
+  }
+
+  function goSubmit() {
+    navigate(`/submit?state=${selected}`)
+    setSelected(null)
+  }
+
+  const isCollected = selected && statesCollected.includes(selected)
 
   return (
     <div className="pb-nav px-4 pt-3 space-y-5 max-w-lg mx-auto">
@@ -57,6 +87,45 @@ export default function Collection() {
         <h1 className="text-2xl font-black text-white">State Collection</h1>
         <p className="text-slate-500 text-sm">Spot plates from all 50 states + D.C.</p>
       </div>
+
+      {/* Just-logged toast */}
+      {justLogged && (
+        <div className="glass-card rounded-xl px-4 py-3 flex items-center gap-3 border border-emerald-700/40">
+          <span className="text-2xl">✅</span>
+          <p className="text-emerald-300 text-sm font-bold">{STATE_NAMES[justLogged]} added! +100 pts</p>
+        </div>
+      )}
+
+      {/* Tap action panel */}
+      {selected && (
+        <div className="glass-card rounded-xl p-4 space-y-3 border border-navy-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-black text-lg">{STATE_NAMES[selected]}</p>
+              <p className="text-slate-500 text-xs">{selected}</p>
+            </div>
+            <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-white text-lg px-1">✕</button>
+          </div>
+          {isCollected ? (
+            <p className="text-brand-blue text-sm font-semibold">✓ Already in your collection</p>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={logState}
+                className="flex-1 bg-brand-blue hover:brightness-110 text-white text-sm font-black py-2.5 rounded-xl transition-all active:scale-95"
+              >
+                Log State +100 pts
+              </button>
+              <button
+                onClick={goSubmit}
+                className="flex-1 glass-card hover:border-navy-500 text-white text-sm font-bold py-2.5 rounded-xl transition-all active:scale-95"
+              >
+                Submit a Plate
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Progress */}
       <div className="glass-card rounded-2xl p-4 space-y-3">
@@ -88,7 +157,7 @@ export default function Collection() {
             </div>
             <div className="grid grid-cols-6 gap-1.5">
               {states.map(abbr => (
-                <StateChip key={abbr} abbr={abbr} collected={statesCollected.includes(abbr)} />
+                <StateChip key={abbr} abbr={abbr} collected={statesCollected.includes(abbr)} onClick={handleChip} />
               ))}
             </div>
           </div>
