@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { signToken } from '../lib/auth.js'
+import { signToken, requireAuth } from '../lib/auth.js'
 import supabase from '../lib/supabase.js'
 
 const router = Router()
@@ -72,6 +72,42 @@ router.post('/login', async (req, res, next) => {
 
     const token = signToken({ id: user.id, email, name: user.display_name })
     res.json({ token, user: { id: user.id, email, name: user.display_name } })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// PUT /auth/profile — update display name
+router.put('/profile', requireAuth, async (req, res, next) => {
+  try {
+    const { displayName } = req.body
+    const trimmed = displayName?.trim()
+    if (!trimmed || trimmed.length < 2 || trimmed.length > 30) {
+      return res.status(400).json({ error: 'Name must be 2–30 characters' })
+    }
+
+    // Check if name already taken by someone else
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('display_name', trimmed)
+      .neq('id', req.user.id)
+      .limit(1)
+
+    if (existing?.length) {
+      return res.status(400).json({ error: 'That username is already taken' })
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ display_name: trimmed })
+      .eq('id', req.user.id)
+
+    if (error) return res.status(500).json({ error: error.message })
+
+    // Issue a fresh token with updated name
+    const token = signToken({ id: req.user.id, email: req.user.email, name: trimmed })
+    res.json({ token, user: { id: req.user.id, email: req.user.email, name: trimmed } })
   } catch (err) {
     next(err)
   }

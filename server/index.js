@@ -10,6 +10,7 @@ import groupsRouter from './routes/groups.js'
 import leaderboardRouter from './routes/leaderboard.js'
 import authRouter from './routes/auth.js'
 import adminRouter from './routes/admin.js'
+import feedbackRouter from './routes/feedback.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -26,6 +27,7 @@ app.use('/groups', groupsRouter)
 app.use('/leaderboard', leaderboardRouter)
 app.use('/auth', authRouter)
 app.use('/admin', adminRouter)
+app.use('/feedback', feedbackRouter)
 
 app.get('/health', (_, res) => res.json({ ok: true }))
 

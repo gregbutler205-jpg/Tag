@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 
 const TOPICS = [
@@ -241,6 +242,19 @@ export default function Help() {
           By using iWonde Tag you agree to use it responsibly and in compliance with
           all applicable traffic laws.
         </p>
+      </div>
+
+      {/* Feedback CTA */}
+      <div className="glass-card rounded-2xl p-5 text-center space-y-3 border border-brand-blue/20">
+        <div className="text-3xl">💬</div>
+        <h3 className="text-base font-black text-white">Got something to say?</h3>
+        <p className="text-slate-400 text-sm">Found a bug, have a suggestion, or need to report something? We read every message.</p>
+        <Link
+          to="/feedback"
+          className="inline-block bg-brand-blue hover:bg-brand-blue-light text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-glow text-sm"
+        >
+          Send Feedback
+        </Link>
       </div>
 
       <p className="text-center text-slate-600 text-xs pb-4">iWonde Tag · Decode. Collect. Compete.</p>

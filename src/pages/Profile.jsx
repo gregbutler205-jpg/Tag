@@ -1,8 +1,9 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { RARITY } from '../lib/rarityConfig'
 import BackButton from '../components/BackButton'
+import api from '../lib/api'
 
 function compressToBase64(file, size = 160) {
   return new Promise((resolve) => {
@@ -47,16 +48,54 @@ const RARITY_COLORS = {
 }
 
 export default function Profile() {
-  const { user, points, streak, statesCollected, logout, avatarBase64, setAvatar } = useStore()
+  const { user, points, streak, statesCollected, logout, avatarBase64, setAvatar, setUser } = useStore()
   const rank = getRank(points)
   const initials = user?.name?.slice(0, 2).toUpperCase() || '??'
   const fileRef = useRef(null)
+
+  // Username edit state
+  const [editingName, setEditingName] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [nameLoading, setNameLoading] = useState(false)
+  const [nameError, setNameError] = useState(null)
+  const [nameSuccess, setNameSuccess] = useState(false)
 
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
     const b64 = await compressToBase64(file)
     setAvatar(b64)
+  }
+
+  function startEditName() {
+    setNewName(user?.name || '')
+    setNameError(null)
+    setNameSuccess(false)
+    setEditingName(true)
+  }
+
+  async function saveName() {
+    const trimmed = newName.trim()
+    if (!trimmed || trimmed.length < 2) {
+      setNameError('Name must be at least 2 characters')
+      return
+    }
+    if (trimmed === user?.name) { setEditingName(false); return }
+    setNameLoading(true)
+    setNameError(null)
+    try {
+      const { data } = await api.put('/auth/profile', { displayName: trimmed })
+      // Save new token + update store
+      localStorage.setItem('token', data.token)
+      setUser(data.user)
+      setNameSuccess(true)
+      setEditingName(false)
+      setTimeout(() => setNameSuccess(false), 3000)
+    } catch (err) {
+      setNameError(err.response?.data?.error || 'Failed to update name')
+    } finally {
+      setNameLoading(false)
+    }
   }
 
   return (
@@ -113,8 +152,51 @@ export default function Profile() {
             </svg>
           </button>
         </div>
-        <div>
-          <div className="text-xl font-bold text-white">{user?.name || 'Guest Player'}</div>
+        <div className="space-y-1">
+          {/* Display name + edit */}
+          {editingName && user ? (
+            <div className="flex items-center gap-2 justify-center">
+              <input
+                type="text"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveName()}
+                maxLength={30}
+                autoFocus
+                className="bg-navy-800 border border-brand-blue rounded-xl px-3 py-1.5 text-white text-sm font-bold text-center focus:outline-none w-44"
+              />
+              <button
+                onClick={saveName}
+                disabled={nameLoading}
+                className="bg-brand-blue text-white text-xs font-bold px-3 py-1.5 rounded-xl disabled:opacity-50"
+              >
+                {nameLoading ? '...' : 'Save'}
+              </button>
+              <button
+                onClick={() => setEditingName(false)}
+                className="text-slate-500 text-xs font-bold px-2 py-1.5 rounded-xl hover:text-slate-300"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 justify-center">
+              <div className="text-xl font-bold text-white">{user?.name || 'Guest Player'}</div>
+              {user && (
+                <button
+                  onClick={startEditName}
+                  className="text-slate-500 hover:text-brand-yellow transition-colors"
+                  title="Edit username"
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+          {nameError && <p className="text-red-400 text-xs">{nameError}</p>}
+          {nameSuccess && <p className="text-emerald-400 text-xs">Username updated!</p>}
           <div className={`text-sm font-semibold ${rank.color}`}>{rank.label}</div>
           <div className="text-slate-500 text-xs mt-0.5">{user?.email || 'Not signed in'}</div>
         </div>
@@ -192,9 +274,10 @@ export default function Profile() {
       </div>
 
       {/* Footer links */}
-      <div className="flex justify-center gap-6 pb-2">
-        <Link to="/privacy" className="text-slate-600 text-xs hover:text-slate-400 transition-colors">Privacy Policy</Link>
-        <Link to="/help" className="text-slate-600 text-xs hover:text-slate-400 transition-colors">How to Play</Link>
+      <div className="flex justify-center gap-6 pb-2 flex-wrap">
+        <Link to="/privacy"  className="text-slate-600 text-xs hover:text-slate-400 transition-colors">Privacy Policy</Link>
+        <Link to="/help"     className="text-slate-600 text-xs hover:text-slate-400 transition-colors">How to Play</Link>
+        <Link to="/feedback" className="text-slate-600 text-xs hover:text-slate-400 transition-colors">Send Feedback</Link>
       </div>
 
     </div>
