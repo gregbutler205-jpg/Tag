@@ -114,22 +114,35 @@ router.post('/challenge', optionalAuth, async (req, res, next) => {
 })
 
 // POST /plates/ocr — Preprocess + vision pipeline plate detection
+// Send skipCrop=true (as a FormData field) when the client has already cropped
+// the image to the plate area — bypasses server-side auto-crop entirely.
 router.post('/ocr', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No photo uploaded' })
 
-    const { buffer: croppedBuffer, log: cropLog } = await cropForPlateDetection(req.file.buffer)
+    const userCropped = req.body?.skipCrop === 'true'
+
+    let imageBuffer, cropLog
+    if (userCropped) {
+      // Client already cropped to the plate — use the buffer as-is
+      imageBuffer = req.file.buffer
+      cropLog = { cropSucceeded: true, plateZoneCropped: true, cropType: 'user_cropped', usedFallback: false }
+      console.log('[OCR] Using user-cropped image (server crop skipped)')
+    } else {
+      const result = await cropForPlateDetection(req.file.buffer)
+      imageBuffer = result.buffer
+      cropLog = result.log
+    }
 
     // Try Google Cloud Vision first — fast (~300ms)
     let text = null
     let meta = { ...cropLog, method: 'google_vision' }
     try {
-      text = await extractPlateText(croppedBuffer)
+      text = await extractPlateText(imageBuffer)
       console.log('[OCR] Google Vision result:', text)
     } catch (gErr) {
       console.warn('[OCR] Google Vision failed, falling back to GPT:', gErr.message)
-      // Fall back to GPT vision pipeline
-      const vResult = await detectPlateVision(croppedBuffer, cropLog)
+      const vResult = await detectPlateVision(imageBuffer, cropLog)
       text = vResult.text
       meta = { ...vResult.meta, method: 'gpt_vision' }
     }

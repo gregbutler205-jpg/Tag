@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { STATES, STATE_NAMES } from '../lib/rarityConfig'
 import PlateCard from '../components/PlateCard'
+import PlateCropper from '../components/PlateCropper'
 import useStore from '../store/useStore'
 import api from '../lib/api'
 import BackButton from '../components/BackButton'
@@ -122,16 +123,17 @@ export default function Submit() {
     const s = searchParams.get('state')
     if (s) setState(s)
   }, [])
-  const [loading, setLoading]     = useState(false)
-  const [result, setResult]       = useState(null)
-  const [error, setError]         = useState(null)
-  const [photoData, setPhotoData] = useState(null)
+  const [loading, setLoading]         = useState(false)
+  const [result, setResult]           = useState(null)
+  const [error, setError]             = useState(null)
+  const [photoData, setPhotoData]     = useState(null)   // DataURL for preview
+  const [cropSrc, setCropSrc]         = useState(null)   // DataURL shown in cropper
   const [ocrLoading, setOcrLoading]   = useState(false)
   const [cropMeta, setCropMeta]       = useState(null)
-  const [ocrFailed, setOcrFailed]         = useState(false)
-  const [userMeaning, setUserMeaning]     = useState('')
-  const [challenge, setChallenge]         = useState(null)   // judgment result
-  const [challenging, setChallenging]     = useState(false)
+  const [ocrFailed, setOcrFailed]     = useState(false)
+  const [userMeaning, setUserMeaning] = useState('')
+  const [challenge, setChallenge]     = useState(null)
+  const [challenging, setChallenging] = useState(false)
   const fileInputRef  = useRef(null)
   const plateInputRef = useRef(null)
   const [stateAdded, setStateAdded] = useState(false)
@@ -145,39 +147,63 @@ export default function Submit() {
     setTimeout(() => setStateAdded(false), 3000)
   }
 
-  /* ── OCR ─────────────────────────────────────────────────── */
-  const runOcr = async (file) => {
+  /* ── OCR — called with a pre-cropped Blob from PlateCropper ── */
+  const runOcr = async (croppedBlob, previewDataUrl) => {
+    // Show the cropped area as the photo preview
+    setPhotoData(previewDataUrl)
+    setCropSrc(null)   // exit cropper
+
     setOcrLoading(true)
+    setOcrFailed(false)
     try {
       const form = new FormData()
-      form.append('photo', file)
+      form.append('photo', croppedBlob, 'plate.jpg')
+      form.append('skipCrop', 'true')   // tell server not to auto-crop again
       const { data } = await api.post('/plates/ocr', form)
       if (data.text) {
         setPlateText(data.text.toUpperCase())
         setOcrFailed(false)
       } else {
         setOcrFailed(true)
-        // Focus the plate input so user can type immediately
         setTimeout(() => plateInputRef.current?.focus(), 100)
       }
       if (data.meta) setCropMeta(data.meta)
     } catch {
       // OCR unavailable — user types manually
+      setOcrFailed(true)
     } finally {
       setOcrLoading(false)
     }
   }
 
-  /* ── File picked (camera OR gallery) ────────────────────── */
+  /* ── File picked — show in cropper first, don't run OCR yet ── */
   const handleFilePick = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = ev => setPhotoData(ev.target.result)
+    reader.onload = ev => {
+      setCropSrc(ev.target.result)   // open crop UI
+      setPhotoData(null)
+      setPlateText('')
+      setOcrFailed(false)
+      setCropMeta(null)
+    }
     reader.readAsDataURL(file)
-    runOcr(file)
-    // Reset input so the same file can be re-selected if needed
-    e.target.value = ''
+    e.target.value = ''   // allow re-selecting same file
+  }
+
+  /* ── Crop confirmed — extract preview DataURL then run OCR ── */
+  const handleCropConfirm = (croppedBlob) => {
+    const reader = new FileReader()
+    reader.onload = ev => runOcr(croppedBlob, ev.target.result)
+    reader.readAsDataURL(croppedBlob)
+  }
+
+  /* ── Crop cancelled — go back to picker ── */
+  const handleCropCancel = () => {
+    setCropSrc(null)
+    setPhotoData(null)
+    setPlateText('')
   }
 
   /* ── Interpret ───────────────────────────────────────────── */
@@ -225,8 +251,9 @@ export default function Submit() {
   /* ── Reset ───────────────────────────────────────────────── */
   const reset = () => {
     setResult(null); setPlateText(''); setState('')
-    setPhotoData(null); setError(null); setOcrFailed(false)
-    setCropMeta(null); setUserMeaning(''); setChallenge(null)
+    setPhotoData(null); setCropSrc(null); setError(null)
+    setOcrFailed(false); setCropMeta(null)
+    setUserMeaning(''); setChallenge(null)
   }
 
   return (
@@ -270,7 +297,7 @@ export default function Submit() {
           {mode === MODES.camera && (
             <div className="space-y-3">
 
-              {/* Hidden native file input — opens camera picker on mobile */}
+              {/* Hidden native file input — opens camera/gallery/files picker */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -279,8 +306,8 @@ export default function Submit() {
                 onChange={handleFilePick}
               />
 
-              {!photoData ? (
-                /* Tap-to-open picker */
+              {/* ── Step 1: No photo yet — show picker ── */}
+              {!cropSrc && !photoData && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full bg-navy-900 rounded-2xl border-2 border-dashed border-navy-600 hover:border-brand-blue transition-colors aspect-video flex flex-col items-center justify-center gap-3"
@@ -288,74 +315,77 @@ export default function Submit() {
                   <span className="text-5xl">📸</span>
                   <div className="text-center">
                     <p className="text-white font-bold text-lg">Take a Photo</p>
-                    <p className="text-slate-500 text-sm">or choose from your library</p>
+                    <p className="text-slate-500 text-sm">Camera · Library · Files — all work</p>
                   </div>
                 </button>
-              ) : (
-                /* Preview of selected photo */
-                <>
-                <div className="relative rounded-2xl overflow-hidden border border-navy-600">
-                  <img src={photoData} alt="Plate" className="w-full rounded-2xl" />
+              )}
 
-                  {/* Re-take / remove */}
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="bg-navy-900/90 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-brand-blue transition-colors"
-                    >
-                      Retake
-                    </button>
-                    <button
-                      onClick={() => { setPhotoData(null); setPlateText('') }}
-                      className="bg-navy-900/90 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm hover:bg-red-900 transition-colors"
-                    >
-                      ✕
-                    </button>
+              {/* ── Step 2: Crop UI — frame the plate ── */}
+              {cropSrc && !photoData && (
+                <PlateCropper
+                  imageSrc={cropSrc}
+                  onConfirm={handleCropConfirm}
+                  onCancel={handleCropCancel}
+                />
+              )}
+
+              {/* ── Step 3: Cropped preview + OCR result ── */}
+              {photoData && (
+                <>
+                  <div className="relative rounded-2xl overflow-hidden border border-navy-600">
+                    <img src={photoData} alt="Cropped plate" className="w-full rounded-2xl" />
+
+                    {/* Re-crop / remove */}
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-navy-900/90 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-brand-blue transition-colors"
+                      >
+                        New Photo
+                      </button>
+                      <button
+                        onClick={() => { setPhotoData(null); setPlateText(''); setCropMeta(null) }}
+                        className="bg-navy-900/90 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm hover:bg-red-900 transition-colors"
+                        title="Remove photo"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* OCR loading overlay */}
+                    {ocrLoading && (
+                      <div className="absolute inset-0 bg-navy-900/70 flex flex-col items-center justify-center gap-2 rounded-2xl">
+                        <div className="text-brand-yellow animate-pulse text-sm font-bold">Reading plate...</div>
+                        <div className="w-8 h-8 border-2 border-brand-yellow/30 border-t-brand-yellow rounded-full animate-spin" />
+                      </div>
+                    )}
+
+                    {/* OCR success badge */}
+                    {!ocrLoading && plateText && (
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-emerald-900/90 border border-emerald-600 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                        ✓ Read: {plateText}
+                      </div>
+                    )}
                   </div>
 
-                  {/* OCR loading overlay */}
-                  {ocrLoading && (
-                    <div className="absolute inset-0 bg-navy-900/70 flex flex-col items-center justify-center gap-2">
-                      <div className="text-brand-yellow animate-pulse text-sm font-bold">Reading plate...</div>
-                      <div className="w-8 h-8 border-2 border-brand-yellow/30 border-t-brand-yellow rounded-full animate-spin" />
+                  {/* OCR metadata badges */}
+                  {!ocrLoading && cropMeta && (
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-900/50 text-emerald-400">
+                        🎯 User cropped
+                      </span>
+                      {cropMeta.method && (
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-900/50 text-blue-400">
+                          {cropMeta.method === 'google_vision' ? '⚡ Google Vision' : '🤖 AI Vision'}
+                        </span>
+                      )}
+                      {cropMeta.escalated && (
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-amber-900/50 text-amber-400">
+                          🔺 Enhanced
+                        </span>
+                      )}
                     </div>
                   )}
-
-                  {/* OCR result badge */}
-                  {!ocrLoading && plateText && (
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-emerald-900/90 border border-emerald-600 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                      ✓ Read: {plateText}
-                    </div>
-                  )}
-                </div>
-
-                {/* Pipeline metadata badges */}
-              {!ocrLoading && cropMeta && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    cropMeta.plateZoneCropped ? 'bg-emerald-900/50 text-emerald-400'
-                    : cropMeta.cropSucceeded  ? 'bg-blue-900/50 text-blue-400'
-                    :                           'bg-slate-800 text-slate-500'
-                  }`}>
-                    {cropMeta.plateZoneCropped ? '🎯 Plate zone' : cropMeta.cropSucceeded ? '🚗 Rear crop' : '📷 Full image'}
-                  </span>
-                  {cropMeta.escalated && (
-                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-amber-900/50 text-amber-400">
-                      🔺 Enhanced
-                    </span>
-                  )}
-                  {cropMeta.confidence != null && (
-                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400">
-                      {Math.round(cropMeta.confidence * 100)}% conf
-                    </span>
-                  )}
-                  {cropMeta.estimatedCostUSD != null && (
-                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-500">
-                      ~${cropMeta.estimatedCostUSD.toFixed(4)}
-                    </span>
-                  )}
-                </div>
-              )}
                 </>
               )}
             </div>
