@@ -33,7 +33,7 @@ const links = [
   { to: '/daily',      Icon: CalendarIcon, label: 'Daily'              },
   { to: '/submit',     Icon: CameraIcon,   label: 'Submit'             },
   { to: '/groups',     Icon: UsersIcon,    label: 'Groups'             },
-  { to: '/collection', Icon: MapIcon,      label: 'Map'                },
+  { to: '/collection', Icon: MapIcon,      label: 'States'             },
 ]
 
 export default function NavBar() {

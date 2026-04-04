@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import PlateCard from '../components/PlateCard'
 import { STATES, STATE_NAMES } from '../lib/rarityConfig'
 import api from '../lib/api'
@@ -74,37 +74,130 @@ function VerdictBadge({ verdict, score }) {
   )
 }
 
+// ── Format seconds as m:ss ────────────────────────────────────────────────────
+function fmtTime(s) {
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+// ── All 51 state abbreviations ────────────────────────────────────────────────
+const ALL_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
+  'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC',
+]
+
+// ── Tab configs per mode ──────────────────────────────────────────────────────
+const MODE_TABS = {
+  plates: [
+    { key: 'challenges', label: '🏷️ Plates' },
+    { key: 'scores',     label: '📊 Scores' },
+    { key: 'members',    label: '👥 Members' },
+    { key: 'post',       label: '+ Post' },
+  ],
+  states: [
+    { key: 'states',  label: '🗺️ States' },
+    { key: 'members', label: '👥 Members' },
+  ],
+  both: [
+    { key: 'challenges', label: '🏷️ Plates' },
+    { key: 'states',     label: '🗺️ States' },
+    { key: 'scores',     label: '📊 Scores' },
+    { key: 'members',    label: '👥 Members' },
+    { key: 'post',       label: '+ Post' },
+  ],
+  daily: [
+    { key: 'today',   label: '📅 Today' },
+    { key: 'results', label: '📊 Results' },
+    { key: 'members', label: '👥 Members' },
+  ],
+}
+
+const MODE_DEFAULT_TAB = {
+  plates: 'challenges',
+  states: 'states',
+  both:   'challenges',
+  daily:  'today',
+}
+
 // ── Main GroupRoom ─────────────────────────────────────────────────────────────
 export default function GroupRoom() {
   const { id }  = useParams()
+  const navigate = useNavigate()
   const { user, addPoints } = useStore()
 
   const [group, setGroup]           = useState(null)
   const [challenges, setChallenges] = useState([])
   const [leaderboard, setLeaderboard] = useState([])
-  const [active, setActive]         = useState(null)   // challenge id with open guess box
+  const [active, setActive]         = useState(null)
   const [guess, setGuess]           = useState('')
   const [plateText, setPlateText]   = useState('')
   const [state, setState]           = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [revealing, setRevealing]   = useState(null)   // challenge id being revealed
-  const [revealData, setRevealData] = useState({})     // cid → { aiResult, guesses }
-  const [view, setView]             = useState('challenges') // 'challenges' | 'scores' | 'post'
+  const [revealing, setRevealing]   = useState(null)
+  const [revealData, setRevealData] = useState({})
+  const [view, setView]             = useState('challenges')
+
+  // Members tab
+  const [members, setMembers] = useState([])
+
+  // States tab
+  const [groupStates, setGroupStates] = useState({ myStates: [], leaderboard: [] })
+
+  // Daily tab
+  const [dailyBoard, setDailyBoard] = useState([])
 
   // ── Load group data ──────────────────────────────────────────────────────────
   const loadGroup = () =>
     api.get(`/groups/${id}`).then(({ data }) => {
       setGroup(data.group)
       setChallenges(data.challenges || [])
+      // Set default tab based on mode
+      const mode = data.group?.mode || 'plates'
+      setView(MODE_DEFAULT_TAB[mode] || 'challenges')
     }).catch(() => {
-      setGroup({ name: 'My Group', code: 'GRP123' })
+      setGroup({ name: 'My Group', code: 'GRP123', mode: 'plates' })
       setChallenges([])
     })
 
   const loadLeaderboard = () =>
     api.get(`/groups/${id}/leaderboard`).then(({ data }) => setLeaderboard(data)).catch(() => {})
 
-  useEffect(() => { loadGroup(); loadLeaderboard() }, [id])
+  const loadMembers = () =>
+    api.get(`/groups/${id}/members`).then(({ data }) => setMembers(data)).catch(() => {})
+
+  const loadGroupStates = () =>
+    api.get(`/groups/${id}/states`).then(({ data }) => setGroupStates(data)).catch(() => {})
+
+  const loadDailyBoard = () =>
+    api.get(`/groups/${id}/daily-leaderboard`).then(({ data }) => setDailyBoard(data)).catch(() => {})
+
+  useEffect(() => {
+    loadGroup()
+    loadLeaderboard()
+    loadMembers()
+    loadGroupStates()
+    loadDailyBoard()
+  }, [id])
+
+  // ── Share / invite ───────────────────────────────────────────────────────────
+  const handleShare = async () => {
+    try {
+      await navigator.share({
+        title: 'Join my group on iWonde Tag',
+        text: `Join my group "${group.name}" — use code ${group.code}`,
+        url: 'https://tag.iwonde.com/groups',
+      })
+    } catch {
+      try {
+        await navigator.clipboard.writeText(group.code)
+        alert(`Code ${group.code} copied to clipboard!`)
+      } catch {
+        // silently fail
+      }
+    }
+  }
 
   // ── Submit plate to group ────────────────────────────────────────────────────
   const submitPlate = async () => {
@@ -134,10 +227,8 @@ export default function GroupRoom() {
     try {
       const { data } = await api.post(`/groups/${id}/challenges/${challengeId}/reveal`)
       setRevealData(prev => ({ ...prev, [challengeId]: data }))
-      // Award the current user their own points locally (UI feedback)
       const mine = data.guesses?.find(g => g.userId === user?.id)
       if (mine?.score > 0) addPoints(mine.score)
-      // Refresh group so challenge shows as revealed
       loadGroup()
       loadLeaderboard()
     } catch {
@@ -147,9 +238,41 @@ export default function GroupRoom() {
     }
   }
 
+  // ── Log a state ───────────────────────────────────────────────────────────────
+  const logState = async (abbr) => {
+    if (groupStates.myStates.includes(abbr)) return
+    try {
+      await api.post(`/groups/${id}/states`, { state: abbr })
+      loadGroupStates()
+    } catch {
+      // silently fail
+    }
+  }
+
+  // ── Reset group states ────────────────────────────────────────────────────────
+  const resetGroupStates = async () => {
+    if (!window.confirm('Reset all states for this group? This only affects this group.')) return
+    try {
+      await api.delete(`/groups/${id}/states/reset`)
+      loadGroupStates()
+    } catch {
+      // silently fail
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const isClosed  = c => c.timeLeft === 'Closed'
   const canReveal = c => isClosed(c) && !c.revealed
+
+  const groupMode = group?.mode || 'plates'
+  const tabs = MODE_TABS[groupMode] || MODE_TABS.plates
+
+  // Ensure current view is valid for the current mode
+  const validViews = tabs.map(t => t.key)
+  const currentView = validViews.includes(view) ? view : validViews[0]
+
+  const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const myDailyEntry = dailyBoard.find(r => r.isYou)
 
   return (
     <div className="pb-nav px-4 space-y-4 max-w-lg mx-auto">
@@ -167,21 +290,24 @@ export default function GroupRoom() {
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">Invite code:</span>
               <span className="text-xs font-mono font-bold text-brand-yellow tracking-widest">{group.code}</span>
+              <button
+                onClick={handleShare}
+                className="text-slate-500 hover:text-white transition-colors text-sm leading-none"
+                title="Share invite"
+              >
+                📤
+              </button>
             </div>
           )}
         </div>
       </div>
 
       {/* ── Tab bar ────────────────────────────────────────── */}
-      <div className="flex glass-card rounded-xl p-1 gap-1">
-        {[
-          { key: 'challenges', label: '🏷️ Plates' },
-          { key: 'scores',     label: '📊 Scores' },
-          { key: 'post',       label: '+ Post' },
-        ].map(t => (
+      <div className="flex glass-card rounded-xl p-1 gap-1 overflow-x-auto">
+        {tabs.map(t => (
           <button key={t.key} onClick={() => setView(t.key)}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-              view === t.key ? 'bg-brand-blue text-white shadow-glow' : 'text-slate-400 hover:text-slate-200'
+            className={`flex-1 min-w-0 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap px-1 ${
+              currentView === t.key ? 'bg-brand-blue text-white shadow-glow' : 'text-slate-400 hover:text-slate-200'
             }`}>
             {t.label}
           </button>
@@ -191,7 +317,7 @@ export default function GroupRoom() {
       {/* ══════════════════════════════════════════════════════
           CHALLENGES TAB
       ══════════════════════════════════════════════════════ */}
-      {view === 'challenges' && (
+      {currentView === 'challenges' && (
         <div className="space-y-4">
           {challenges.length === 0 ? (
             <div className="text-center py-16 space-y-3">
@@ -205,7 +331,7 @@ export default function GroupRoom() {
             </div>
           ) : (
             challenges.map(c => {
-              const rd = revealData[c.id]  // locally cached reveal results
+              const rd = revealData[c.id]
               const isRevealed = c.revealed || !!rd
 
               return (
@@ -295,7 +421,6 @@ export default function GroupRoom() {
                     <div className="border-t border-navy-700 p-4 space-y-3">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Results</p>
 
-                      {/* Show cached reveal data if available */}
                       {rd?.guesses ? (
                         <div className="space-y-2">
                           {rd.guesses.map((g, rank) => (
@@ -341,7 +466,7 @@ export default function GroupRoom() {
       {/* ══════════════════════════════════════════════════════
           SCORES TAB
       ══════════════════════════════════════════════════════ */}
-      {view === 'scores' && (
+      {currentView === 'scores' && (
         <div className="space-y-4">
           <div className="glass-card rounded-2xl overflow-hidden">
             <div className="px-4 py-3 border-b border-navy-700 flex items-center justify-between">
@@ -358,7 +483,6 @@ export default function GroupRoom() {
               <div className="divide-y divide-navy-700">
                 {leaderboard.map((member, i) => (
                   <div key={member.userId} className="flex items-center gap-3 px-4 py-3">
-                    {/* Rank */}
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${
                       i === 0 ? 'bg-yellow-500/20 text-yellow-400'
                       : i === 1 ? 'bg-slate-500/20 text-slate-300'
@@ -368,7 +492,6 @@ export default function GroupRoom() {
                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                     </div>
 
-                    {/* Name + accuracy */}
                     <div className="flex-1 min-w-0">
                       <div className="text-white font-bold text-sm truncate">
                         {member.username}
@@ -386,7 +509,6 @@ export default function GroupRoom() {
                       </div>
                     </div>
 
-                    {/* Score */}
                     <div className="text-right">
                       <div className="text-brand-yellow font-black text-base">
                         {member.total.toLocaleString()}
@@ -410,9 +532,268 @@ export default function GroupRoom() {
       )}
 
       {/* ══════════════════════════════════════════════════════
+          MEMBERS TAB
+      ══════════════════════════════════════════════════════ */}
+      {currentView === 'members' && (
+        <div className="space-y-3">
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-navy-700">
+              <span className="text-sm font-bold text-white">Members</span>
+            </div>
+            {members.length === 0 ? (
+              <div className="text-center py-10 text-slate-500 text-sm">Loading members...</div>
+            ) : (
+              <div className="divide-y divide-navy-700">
+                {members.map(m => (
+                  <div key={m.userId} className="flex items-center gap-3 px-4 py-3">
+                    {/* Avatar */}
+                    <div className="w-9 h-9 rounded-full bg-brand-blue/20 border border-brand-blue/40 flex items-center justify-center text-sm font-black text-brand-blue shrink-0">
+                      {(m.username || '?')[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-white font-bold text-sm truncate">{m.username}</span>
+                        {m.isCreator && (
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-brand-yellow/20 text-brand-yellow border border-brand-yellow/30">
+                            👑 Creator
+                          </span>
+                        )}
+                        {m.userId === user?.id && (
+                          <span className="text-[10px] font-black text-brand-yellow">YOU</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-600">
+                        Joined {new Date(m.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          STATES TAB
+      ══════════════════════════════════════════════════════ */}
+      {currentView === 'states' && (
+        <div className="space-y-4">
+          {/* Log a State */}
+          <div className="glass-card rounded-2xl p-4 space-y-3">
+            <div className="text-sm font-bold text-white">Log a State</div>
+            <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+              {ALL_STATES.map(abbr => {
+                const collected = groupStates.myStates.includes(abbr)
+                return (
+                  <button
+                    key={abbr}
+                    type="button"
+                    title={STATE_NAMES[abbr] || abbr}
+                    onClick={() => logState(abbr)}
+                    disabled={collected}
+                    className={`rounded-lg py-2 text-xs font-black tracking-wide transition-all active:scale-95 ${
+                      collected
+                        ? 'bg-brand-blue text-white shadow-glow'
+                        : 'bg-navy-900 text-slate-400 hover:bg-navy-700 hover:text-white border border-navy-700'
+                    }`}
+                  >
+                    {collected ? `✓` : abbr}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-slate-500">
+              {groupStates.myStates.length} / {ALL_STATES.length} states collected
+            </p>
+          </div>
+
+          {/* State Leaderboard */}
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-navy-700">
+              <span className="text-sm font-bold text-white">State Leaderboard</span>
+            </div>
+            {groupStates.leaderboard.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 text-sm">No states logged yet — be the first!</div>
+            ) : (
+              <div className="divide-y divide-navy-700">
+                {groupStates.leaderboard.map((entry, i) => (
+                  <div key={entry.userId} className="flex items-center gap-3 px-4 py-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${
+                      i === 0 ? 'bg-yellow-500/20 text-yellow-400'
+                      : i === 1 ? 'bg-slate-500/20 text-slate-300'
+                      : i === 2 ? 'bg-orange-700/20 text-orange-400'
+                      : 'bg-navy-800 text-slate-500'
+                    }`}>
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-bold text-sm truncate flex items-center gap-2">
+                        {entry.username}
+                        {entry.isYou && (
+                          <span className="text-brand-yellow text-[10px] font-black">YOU</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-brand-yellow font-black text-base">{entry.count}</div>
+                      <div className="text-slate-600 text-[10px] uppercase tracking-wide">states</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* How States Works */}
+          <div className="glass-card rounded-xl px-4 py-3 space-y-1">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">How States Works</div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Each member logs the states they spot. Whoever collects the most states wins! In Both mode, each new state also earns +50 bonus points toward the group score.
+            </p>
+          </div>
+
+          {/* Reset (owner only) */}
+          {user?.id === group?.owner_id && (
+            <button
+              onClick={resetGroupStates}
+              className="w-full py-3 rounded-xl bg-red-900/30 border border-red-700/40 text-red-400 text-sm font-bold hover:bg-red-900/50 transition-all"
+            >
+              🗑 Reset Group States
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          TODAY / DAILY TAB
+      ══════════════════════════════════════════════════════ */}
+      {currentView === 'today' && (
+        <div className="space-y-4">
+          {/* Date header */}
+          <div className="text-center">
+            <div className="text-sm font-semibold text-slate-400">{todayStr}</div>
+          </div>
+
+          {/* Info card */}
+          <div className="glass-card rounded-xl px-4 py-3 space-y-1">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">How Daily Scoring Works</div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              The timer starts the moment you open the Daily page. Submit fast for a speed bonus! Formula: base points + up to 100 speed bonus (max at 0s, 0 after 5 min).
+            </p>
+          </div>
+
+          {/* CTA if user hasn't submitted */}
+          {!myDailyEntry && (
+            <button
+              onClick={() => navigate('/daily')}
+              className="w-full bg-brand-blue text-white font-bold py-3 rounded-xl shadow-glow transition-all active:scale-[0.98]"
+            >
+              Go to Daily Challenge →
+            </button>
+          )}
+
+          {/* Leaderboard */}
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-navy-700">
+              <span className="text-sm font-bold text-white">Today's Results</span>
+            </div>
+            {dailyBoard.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 text-sm">No results yet today</div>
+            ) : (
+              <div className="divide-y divide-navy-700">
+                {dailyBoard.map((r, i) => (
+                  <div key={r.userId} className={`flex items-center gap-3 px-4 py-3 ${r.isYou ? 'bg-brand-blue/5' : ''}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${
+                      i === 0 ? 'bg-yellow-500/20 text-yellow-400'
+                      : i === 1 ? 'bg-slate-500/20 text-slate-300'
+                      : i === 2 ? 'bg-orange-700/20 text-orange-400'
+                      : 'bg-navy-800 text-slate-500'
+                    }`}>
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-bold text-sm truncate flex items-center gap-2">
+                        {r.username}
+                        {r.isYou && (
+                          <span className="text-brand-yellow text-[10px] font-black">YOU</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        ⏱ {fmtTime(r.timeSeconds)}
+                        {r.speedBonus > 0 && (
+                          <span className="ml-2 text-emerald-400">+{r.speedBonus} speed</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-brand-yellow font-black text-base">{r.totalScore}</div>
+                      <div className="text-slate-600 text-[10px] uppercase tracking-wide">pts</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          RESULTS TAB (daily mode, past results / scores)
+      ══════════════════════════════════════════════════════ */}
+      {currentView === 'results' && (
+        <div className="space-y-4">
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-navy-700">
+              <span className="text-sm font-bold text-white">Daily Leaderboard</span>
+            </div>
+            {dailyBoard.length === 0 ? (
+              <div className="text-center py-10 space-y-2">
+                <div className="text-4xl">📊</div>
+                <div className="text-slate-500 text-sm">No results yet today</div>
+              </div>
+            ) : (
+              <div className="divide-y divide-navy-700">
+                {dailyBoard.map((r, i) => (
+                  <div key={r.userId} className={`flex items-center gap-3 px-4 py-3 ${r.isYou ? 'bg-brand-blue/5' : ''}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${
+                      i === 0 ? 'bg-yellow-500/20 text-yellow-400'
+                      : i === 1 ? 'bg-slate-500/20 text-slate-300'
+                      : i === 2 ? 'bg-orange-700/20 text-orange-400'
+                      : 'bg-navy-800 text-slate-500'
+                    }`}>
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-bold text-sm truncate flex items-center gap-2">
+                        {r.username}
+                        {r.isYou && (
+                          <span className="text-brand-yellow text-[10px] font-black">YOU</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        ⏱ {fmtTime(r.timeSeconds)}
+                        {r.speedBonus > 0 && (
+                          <span className="ml-2 text-emerald-400">+{r.speedBonus} speed</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-brand-yellow font-black text-base">{r.totalScore}</div>
+                      <div className="text-slate-600 text-[10px] uppercase tracking-wide">pts</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
           POST TAB
       ══════════════════════════════════════════════════════ */}
-      {view === 'post' && (
+      {currentView === 'post' && (
         <div className="glass-card rounded-2xl p-4 space-y-4 animate-fade-up">
           <div className="text-sm font-bold text-white">Post a Plate to the Group</div>
 

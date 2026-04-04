@@ -1,17 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import PlateCard from '../components/PlateCard'
 import useStore from '../store/useStore'
 import api from '../lib/api'
 import BackButton from '../components/BackButton'
 import SafetyBanner from '../components/SafetyBanner'
 
+const fmtTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
 export default function Daily() {
-  const [daily, setDaily]         = useState(null)
-  const [guess, setGuess]         = useState('')
-  const [submitted, setSubmitted] = useState(false)
-  const [result, setResult]       = useState(null)
-  const [loading, setLoading]     = useState(true)
+  const [daily, setDaily]           = useState(null)
+  const [guess, setGuess]           = useState('')
+  const [submitted, setSubmitted]   = useState(false)
+  const [result, setResult]         = useState(null)
+  const [loading, setLoading]       = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [elapsed, setElapsed]       = useState(0)
+  const startRef                    = useRef(null)
+
   const { addPoints, markDailyDone, streak, lastDailyDate } = useStore()
 
   const todayStr   = new Date().toDateString()
@@ -22,6 +27,13 @@ export default function Daily() {
   })
 
   useEffect(() => {
+    // Record start time before loading daily data
+    const todayKey = `iwt_daily_start_${new Date().toDateString()}`
+    if (!sessionStorage.getItem(todayKey)) {
+      sessionStorage.setItem(todayKey, Date.now().toString())
+    }
+    startRef.current = parseInt(sessionStorage.getItem(todayKey))
+
     api.get('/daily')
       .then(({ data }) => {
         setDaily(data)
@@ -30,6 +42,15 @@ export default function Daily() {
       .catch(() => setDaily({ plate: 'GR8FUL', id: 'demo' }))
       .finally(() => setLoading(false))
   }, [])
+
+  // Timer interval — only runs when challenge is active
+  useEffect(() => {
+    if (submitted || alreadyDone) return
+    const iv = setInterval(() => {
+      if (startRef.current) setElapsed(Math.round((Date.now() - startRef.current) / 1000))
+    }, 1000)
+    return () => clearInterval(iv)
+  }, [submitted, alreadyDone])
 
   const handleSubmit = async () => {
     if (!guess.trim()) return
@@ -40,11 +61,29 @@ export default function Daily() {
       setSubmitted(true)
       addPoints(data.points || 100)
       markDailyDone()
+
+      // Sync to daily groups (fire and forget)
+      const elapsedNow = startRef.current ? Math.round((Date.now() - startRef.current) / 1000) : 0
+      api.post('/groups/daily-sync', {
+        score: data?.points || 50,
+        timeSeconds: elapsedNow,
+        date: new Date().toDateString(),
+        guess: guess.trim(),
+      }).catch(() => {})
     } catch {
       setResult({ primary: guess, points: 50, rarity: 'common', feedback: 'Answer recorded offline!' })
       setSubmitted(true)
       addPoints(50)
       markDailyDone()
+
+      // Sync to daily groups (fire and forget)
+      const elapsedNow = startRef.current ? Math.round((Date.now() - startRef.current) / 1000) : 0
+      api.post('/groups/daily-sync', {
+        score: 50,
+        timeSeconds: elapsedNow,
+        date: new Date().toDateString(),
+        guess: guess.trim(),
+      }).catch(() => {})
     } finally {
       setSubmitting(false)
     }
@@ -57,17 +96,25 @@ export default function Daily() {
       <div className="px-4 pt-3 space-y-4">
       {/* Header */}
       <div className="pt-2"><BackButton to="/" /></div>
-      <div className="pt-2 flex items-start justify-between">
+      <div className="pt-2 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-white">Tag of the Day</h1>
           <p className="text-slate-500 text-sm">{dateLabel}</p>
         </div>
-        {streak > 0 && (
-          <div className="flex items-center gap-1.5 bg-orange-900/40 border border-orange-700/50 rounded-xl px-3 py-2">
-            <span className="text-lg">🔥</span>
-            <span className="text-orange-300 font-bold text-sm">{streak}d</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {streak > 0 && (
+            <div className="flex items-center gap-1.5 bg-orange-900/40 border border-orange-700/50 rounded-xl px-3 py-2">
+              <span className="text-lg">🔥</span>
+              <span className="text-orange-300 font-bold text-sm">{streak}d</span>
+            </div>
+          )}
+          {!submitted && !alreadyDone && (
+            <div className="flex items-center gap-1.5 bg-navy-800 border border-navy-600 rounded-xl px-3 py-2">
+              <span className="text-xs text-slate-500">⏱</span>
+              <span className="text-white font-mono font-bold text-sm">{fmtTime(elapsed)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Already done banner */}

@@ -42,7 +42,7 @@ export default function Home() {
   async function handleShare() {
     const shareData = {
       title: 'iWonde Tag',
-      text: 'Spot vanity plates, decode their hidden meanings, and compete with friends! 🏷️',
+      text: 'Join me on iWonde Tag — spot vanity license plates, decode their meanings, and collect all 50 states! 🏷️\n\n📲 To install on your phone:\n• iPhone: open the link in Safari → tap the Share icon → "Add to Home Screen"\n• Android: open the link in Chrome → tap the menu (⋮) → "Add to Home Screen"\n\n',
       url: 'https://tag.iwonde.com',
     }
     try {

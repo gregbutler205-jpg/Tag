@@ -15,7 +15,7 @@ router.get('/', requireAuth, async (req, res, next) => {
   try {
     const { data } = await supabase
       .from('group_members')
-      .select('groups(id, name, code, created_at)')
+      .select('groups(id, name, code, mode, owner_id, created_at)')
       .eq('user_id', req.user.id)
     res.json((data || []).map(d => d.groups).filter(Boolean))
   } catch (err) {
@@ -26,10 +26,10 @@ router.get('/', requireAuth, async (req, res, next) => {
 // POST /groups — Create a group
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    const { name } = req.body
+    const { name, mode = 'plates' } = req.body
     if (!name?.trim()) return res.status(400).json({ error: 'Name is required' })
 
-    const group = { id: uuidv4(), name: name.trim(), code: makeCode(), owner_id: req.user.id }
+    const group = { id: uuidv4(), name: name.trim(), code: makeCode(), owner_id: req.user.id, mode }
     await supabase.from('groups').insert(group)
     await supabase.from('group_members').insert({ group_id: group.id, user_id: req.user.id })
 
@@ -53,10 +53,188 @@ router.post('/join', requireAuth, async (req, res, next) => {
   }
 })
 
+// POST /groups/daily-sync — Sync daily challenge result to all daily-mode groups
+// IMPORTANT: must be before /:id routes so 'daily-sync' isn't treated as an ID
+router.post('/daily-sync', requireAuth, async (req, res, next) => {
+  try {
+    const { score = 0, timeSeconds = 0, date, guess } = req.body
+    const speedBonus = Math.max(0, Math.round(100 * Math.max(0, 1 - timeSeconds / 300)))
+    const totalScore = score + speedBonus
+
+    // Find all daily groups this user belongs to
+    const { data: memberships } = await supabase
+      .from('group_members')
+      .select('group_id, groups(mode)')
+      .eq('user_id', req.user.id)
+
+    const dailyGroups = (memberships || []).filter(m => m.groups?.mode === 'daily').map(m => m.group_id)
+
+    for (const gid of dailyGroups) {
+      await supabase.from('group_daily_results').upsert({
+        group_id: gid,
+        user_id: req.user.id,
+        date: date || new Date().toDateString(),
+        base_score: score,
+        speed_bonus: speedBonus,
+        total_score: totalScore,
+        time_seconds: timeSeconds,
+        guess: guess || '',
+        submitted_at: new Date().toISOString(),
+      }, { onConflict: 'group_id,user_id,date', ignoreDuplicates: true })
+    }
+
+    res.json({ ok: true, synced: dailyGroups.length })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /groups/:id/members — List members of a group
+router.get('/:id/members', requireAuth, async (req, res, next) => {
+  try {
+    const { data } = await supabase
+      .from('group_members')
+      .select('user_id, joined_at, users(display_name)')
+      .eq('group_id', req.params.id)
+      .order('joined_at', { ascending: true })
+
+    const { data: group } = await supabase
+      .from('groups')
+      .select('owner_id')
+      .eq('id', req.params.id)
+      .single()
+
+    res.json((data || []).map(m => ({
+      userId:    m.user_id,
+      username:  m.users?.display_name || 'Anonymous',
+      joinedAt:  m.joined_at,
+      isCreator: m.user_id === group?.owner_id,
+    })))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /groups/:id/states — Get group state collection data
+router.get('/:id/states', requireAuth, async (req, res, next) => {
+  try {
+    const { data } = await supabase
+      .from('group_state_collection')
+      .select('user_id, state, users(display_name)')
+      .eq('group_id', req.params.id)
+
+    const byUser = {}
+    const myStates = []
+
+    for (const row of data || []) {
+      if (row.user_id === req.user.id) myStates.push(row.state)
+      if (!byUser[row.user_id]) {
+        byUser[row.user_id] = {
+          userId:   row.user_id,
+          username: row.users?.display_name || 'Anonymous',
+          count:    0,
+        }
+      }
+      byUser[row.user_id].count++
+    }
+
+    const leaderboard = Object.values(byUser)
+      .sort((a, b) => b.count - a.count)
+      .map(u => ({ ...u, isYou: u.userId === req.user.id }))
+
+    res.json({ myStates, leaderboard })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// POST /groups/:id/states — Log a state for the current user in this group
+router.post('/:id/states', requireAuth, async (req, res, next) => {
+  try {
+    const { state } = req.body
+    if (!state) return res.status(400).json({ error: 'state required' })
+
+    await supabase.from('group_state_collection').upsert(
+      {
+        group_id:     req.params.id,
+        user_id:      req.user.id,
+        state,
+        collected_at: new Date().toISOString(),
+      },
+      { onConflict: 'group_id,user_id,state', ignoreDuplicates: true }
+    )
+
+    // In 'both' or 'states' mode, award bonus points
+    const { data: group } = await supabase
+      .from('groups')
+      .select('mode')
+      .eq('id', req.params.id)
+      .single()
+
+    if (group?.mode === 'both' || group?.mode === 'states') {
+      await supabase.rpc('add_points', { p_user_id: req.user.id, p_points: 50 }).catch(() => {})
+    }
+
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// DELETE /groups/:id/states/reset — Reset all states for a group (owner only)
+router.delete('/:id/states/reset', requireAuth, async (req, res, next) => {
+  try {
+    const { data: group } = await supabase
+      .from('groups')
+      .select('owner_id')
+      .eq('id', req.params.id)
+      .single()
+
+    if (group?.owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Only the creator can reset states' })
+    }
+
+    await supabase.from('group_state_collection').delete().eq('group_id', req.params.id)
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /groups/:id/daily-leaderboard — Today's daily results for a group
+router.get('/:id/daily-leaderboard', requireAuth, async (req, res, next) => {
+  try {
+    const today = new Date().toDateString()
+    const { data } = await supabase
+      .from('group_daily_results')
+      .select('user_id, base_score, speed_bonus, total_score, time_seconds, guess, users(display_name)')
+      .eq('group_id', req.params.id)
+      .eq('date', today)
+      .order('total_score', { ascending: false })
+
+    res.json((data || []).map(r => ({
+      userId:      r.user_id,
+      username:    r.users?.display_name || 'Anonymous',
+      baseScore:   r.base_score,
+      speedBonus:  r.speed_bonus,
+      totalScore:  r.total_score,
+      timeSeconds: r.time_seconds,
+      guess:       r.guess,
+      isYou:       r.user_id === req.user.id,
+    })))
+  } catch (err) {
+    next(err)
+  }
+})
+
 // GET /groups/:id — Get group + challenges
 router.get('/:id', requireAuth, async (req, res, next) => {
   try {
-    const { data: group } = await supabase.from('groups').select('*').eq('id', req.params.id).single()
+    const { data: group } = await supabase
+      .from('groups')
+      .select('id, name, code, mode, owner_id, created_at')
+      .eq('id', req.params.id)
+      .single()
     if (!group) return res.status(404).json({ error: 'Not found' })
 
     const { data: challenges } = await supabase
@@ -67,16 +245,16 @@ router.get('/:id', requireAuth, async (req, res, next) => {
       .limit(20)
 
     const mapped = (challenges || []).map(c => ({
-      id: c.id,
-      plateText: c.plate_text,
-      state: c.state,
+      id:          c.id,
+      plateText:   c.plate_text,
+      state:       c.state,
       submittedBy: c.submitted_by_name || 'Someone',
-      isOwn: c.submitted_by === req.user.id,
-      hasGuessed: c.group_guesses?.some(g => g.user_id === req.user.id),
-      guessCount: c.group_guesses?.length || 0,
-      revealed: c.revealed || new Date(c.closes_at) < new Date(),
-      aiResult: c.revealed ? c.ai_result : null,
-      timeLeft: new Date(c.closes_at) > new Date()
+      isOwn:       c.submitted_by === req.user.id,
+      hasGuessed:  c.group_guesses?.some(g => g.user_id === req.user.id),
+      guessCount:  c.group_guesses?.length || 0,
+      revealed:    c.revealed || new Date(c.closes_at) < new Date(),
+      aiResult:    c.revealed ? c.ai_result : null,
+      timeLeft:    new Date(c.closes_at) > new Date()
         ? `${Math.ceil((new Date(c.closes_at) - Date.now()) / 3600000)}h left`
         : 'Closed',
     }))
@@ -100,30 +278,30 @@ router.post('/:id/plates', requireAuth, async (req, res, next) => {
     const aiResult = await interpretPlate(plateUpper, state)
 
     const challenge = {
-      id: uuidv4(),
-      group_id: req.params.id,
-      plate_text: plateUpper,
-      state: state || null,
-      submitted_by: req.user.id,
+      id:                uuidv4(),
+      group_id:          req.params.id,
+      plate_text:        plateUpper,
+      state:             state || null,
+      submitted_by:      req.user.id,
       submitted_by_name: req.user.name || 'Anonymous',
-      closes_at: closesAt,
-      ai_result: aiResult,
-      revealed: false,
+      closes_at:         closesAt,
+      ai_result:         aiResult,
+      revealed:          false,
     }
 
     await supabase.from('group_challenges').insert(challenge)
 
     res.json({
-      id: challenge.id,
-      plateText: plateUpper,
+      id:          challenge.id,
+      plateText:   plateUpper,
       state,
       submittedBy: challenge.submitted_by_name,
-      isOwn: true,
-      hasGuessed: false,
-      guessCount: 0,
-      revealed: false,
-      aiResult: null,
-      timeLeft: `${windowHours}h left`,
+      isOwn:       true,
+      hasGuessed:  false,
+      guessCount:  0,
+      revealed:    false,
+      aiResult:    null,
+      timeLeft:    `${windowHours}h left`,
     })
   } catch (err) {
     next(err)
@@ -142,14 +320,14 @@ router.post('/:id/challenges/:cid/guess', requireAuth, async (req, res, next) =>
     if (new Date(challenge.closes_at) < new Date()) return res.status(410).json({ error: 'Window has closed' })
 
     const submittedAt = new Date().toISOString()
-    const windowAge = (Date.now() - new Date(challenge.created_at).getTime()) / 1000 // seconds
-    const speedPenalty = windowAge < 3 ? 0.5 : 1 // flag suspicious fast answers
+    const windowAge = (Date.now() - new Date(challenge.created_at).getTime()) / 1000
+    const speedPenalty = windowAge < 3 ? 0.5 : 1
 
     await supabase.from('group_guesses').insert({
-      id: uuidv4(),
+      id:           uuidv4(),
       challenge_id: cid,
-      user_id: req.user.id,
-      guess: guess.trim(),
+      user_id:      req.user.id,
+      guess:        guess.trim(),
       submitted_at: submittedAt,
       speed_penalty: speedPenalty,
     })
@@ -168,6 +346,7 @@ router.post('/:id/challenges/:cid/reveal', requireAuth, async (req, res, next) =
     const { data: challenge } = await supabase
       .from('group_challenges').select('*').eq('id', cid).single()
     if (!challenge) return res.status(404).json({ error: 'Challenge not found' })
+
     if (challenge.revealed) {
       // Already revealed — just return the scored guesses
       const { data: existing } = await supabase
@@ -178,9 +357,12 @@ router.post('/:id/challenges/:cid/reveal', requireAuth, async (req, res, next) =
       return res.json({
         aiResult: challenge.ai_result,
         guesses: (existing || []).map(g => ({
-          id: g.id, username: g.users?.display_name || 'Anonymous',
-          guess: g.guess, verdict: g.verdict || 'disagree',
-          score: g.score || 0, reasoning: g.reasoning || '',
+          id:        g.id,
+          username:  g.users?.display_name || 'Anonymous',
+          guess:     g.guess,
+          verdict:   g.verdict || 'disagree',
+          score:     g.score || 0,
+          reasoning: g.reasoning || '',
         })),
       })
     }
@@ -206,7 +388,7 @@ router.post('/:id/challenges/:cid/reveal', requireAuth, async (req, res, next) =
     const scoreMap = {}
     for (const s of scored) scoreMap[s.id] = s
 
-    // Update each guess + award global points (full credit)
+    // Update each guess + award global points
     for (const g of guesses) {
       const s = scoreMap[g.id] || { verdict: 'disagree', bonusPoints: 0, reasoning: '' }
       const { error: upErr } = await supabase
@@ -239,9 +421,12 @@ router.post('/:id/challenges/:cid/reveal', requireAuth, async (req, res, next) =
     res.json({
       aiResult,
       guesses: (finalGuesses || []).map(g => ({
-        id: g.id, username: g.users?.display_name || 'Anonymous',
-        guess: g.guess, verdict: g.verdict || 'disagree',
-        score: g.score || 0, reasoning: g.reasoning || '',
+        id:        g.id,
+        username:  g.users?.display_name || 'Anonymous',
+        guess:     g.guess,
+        verdict:   g.verdict || 'disagree',
+        score:     g.score || 0,
+        reasoning: g.reasoning || '',
       })),
     })
   } catch (err) {
