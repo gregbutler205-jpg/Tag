@@ -136,10 +136,13 @@ router.post('/ocr', upload.single('photo'), async (req, res) => {
 
     // Try Google Cloud Vision first — fast (~300ms)
     let text = null
+    let detectedState = null
     let meta = { ...cropLog, method: 'google_vision' }
     try {
-      text = await extractPlateText(imageBuffer)
-      console.log('[OCR] Google Vision result:', text)
+      const visionResult = await extractPlateText(imageBuffer)
+      text = visionResult.plateText
+      detectedState = visionResult.detectedState
+      console.log('[OCR] Google Vision result:', text, '| state:', detectedState)
     } catch (gErr) {
       console.warn('[OCR] Google Vision failed, falling back to GPT:', gErr.message)
       const vResult = await detectPlateVision(imageBuffer, cropLog)
@@ -147,7 +150,7 @@ router.post('/ocr', upload.single('photo'), async (req, res) => {
       meta = { ...vResult.meta, method: 'gpt_vision' }
     }
 
-    res.json({ text: text || null, meta })
+    res.json({ text: text || null, detectedState: detectedState || null, meta })
   } catch (err) {
     console.error('[OCR route]', err.message)
     res.json({ text: null, meta: { error: err.message } })

@@ -123,17 +123,18 @@ export default function Submit() {
     const s = searchParams.get('state')
     if (s) setState(s)
   }, [])
-  const [loading, setLoading]         = useState(false)
-  const [result, setResult]           = useState(null)
-  const [error, setError]             = useState(null)
-  const [photoData, setPhotoData]     = useState(null)   // DataURL for preview
-  const [cropSrc, setCropSrc]         = useState(null)   // DataURL shown in cropper
-  const [ocrLoading, setOcrLoading]   = useState(false)
-  const [cropMeta, setCropMeta]       = useState(null)
-  const [ocrFailed, setOcrFailed]     = useState(false)
-  const [userMeaning, setUserMeaning] = useState('')
-  const [challenge, setChallenge]     = useState(null)
-  const [challenging, setChallenging] = useState(false)
+  const [loading, setLoading]             = useState(false)
+  const [result, setResult]               = useState(null)
+  const [error, setError]                 = useState(null)
+  const [photoData, setPhotoData]         = useState(null)   // DataURL for preview
+  const [cropSrc, setCropSrc]             = useState(null)   // DataURL shown in cropper
+  const [ocrLoading, setOcrLoading]       = useState(false)
+  const [cropMeta, setCropMeta]           = useState(null)
+  const [ocrFailed, setOcrFailed]         = useState(false)
+  const [userMeaning, setUserMeaning]     = useState('')
+  const [challenge, setChallenge]         = useState(null)
+  const [challenging, setChallenging]     = useState(false)
+  const [stateAutoFilled, setStateAutoFilled] = useState(false)  // true when state came from OCR
   const fileInputRef  = useRef(null)
   const plateInputRef = useRef(null)
   const [stateAdded, setStateAdded] = useState(false)
@@ -155,11 +156,13 @@ export default function Submit() {
 
     setOcrLoading(true)
     setOcrFailed(false)
+    setStateAutoFilled(false)
     try {
       const form = new FormData()
       form.append('photo', croppedBlob, 'plate.jpg')
       form.append('skipCrop', 'true')   // tell server not to auto-crop again
       const { data } = await api.post('/plates/ocr', form)
+
       if (data.text) {
         setPlateText(data.text.toUpperCase())
         setOcrFailed(false)
@@ -167,9 +170,15 @@ export default function Submit() {
         setOcrFailed(true)
         setTimeout(() => plateInputRef.current?.focus(), 100)
       }
+
+      // Auto-fill state if detected and not already set by user
+      if (data.detectedState) {
+        setState(data.detectedState)
+        setStateAutoFilled(true)
+      }
+
       if (data.meta) setCropMeta(data.meta)
     } catch {
-      // OCR unavailable — user types manually
       setOcrFailed(true)
     } finally {
       setOcrLoading(false)
@@ -204,6 +213,7 @@ export default function Submit() {
     setCropSrc(null)
     setPhotoData(null)
     setPlateText('')
+    setStateAutoFilled(false)
   }
 
   /* ── Interpret ───────────────────────────────────────────── */
@@ -254,6 +264,7 @@ export default function Submit() {
     setPhotoData(null); setCropSrc(null); setError(null)
     setOcrFailed(false); setCropMeta(null)
     setUserMeaning(''); setChallenge(null)
+    setStateAutoFilled(false)
   }
 
   return (
@@ -418,7 +429,21 @@ export default function Submit() {
           </div>
 
           {/* ── State selector ── */}
-          <StateChipPicker value={state} onChange={setState} />
+          <StateChipPicker
+            value={state}
+            onChange={(s) => { setState(s); setStateAutoFilled(false) }}
+          />
+
+          {/* ── Auto-detected state warning ── */}
+          {stateAutoFilled && state && (
+            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-red-950/40 border border-red-700/50">
+              <span className="text-red-400 text-base mt-0.5 flex-shrink-0">⚠️</span>
+              <p className="text-red-300 text-xs leading-relaxed">
+                <span className="font-bold">{state} — {STATE_NAMES[state]}</span> was auto-detected.
+                {' '}Tap the state selector above to change it if wrong.
+              </p>
+            </div>
+          )}
 
           {/* ── Log state without plate ── */}
           {state && !plateText.trim() && (
