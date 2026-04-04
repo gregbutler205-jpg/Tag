@@ -2,6 +2,7 @@ import BackButton from '../components/BackButton'
 
 const TOPICS = [
   { id: 'getting-started',  label: 'Getting Started',         emoji: '🚀' },
+  { id: 'install',          label: 'Installing the App',      emoji: '📲' },
   { id: 'scan-a-tag',       label: 'Submit a Tag',            emoji: '📸' },
   { id: 'beat-ai',          label: 'Can You Beat AI?',        emoji: '🏆' },
   { id: 'tag-of-the-day',   label: 'Tag of the Day',          emoji: '🏷️' },
@@ -49,6 +50,38 @@ export default function Help() {
         <Step n={1} text='Tap the person icon in the top-right corner of any screen.' />
         <Step n={2} text='Tap "Create Account," enter a username and email address, then tap Create Account.' />
         <Step n={3} text="To sign in on another device, tap Sign In and enter your username." />
+      </Section>
+
+      {/* ── Installing the App ───────────────────────────── */}
+      <Section id="install" title="Installing the App" emoji="📲">
+        <P>iWonde Tag is a Progressive Web App (PWA) — it installs directly from your browser and works like a native app on your home screen. No App Store required.</P>
+
+        <div className="rounded-xl bg-navy-800 border border-navy-600 p-4 space-y-3 mt-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xl">🍎</span>
+            <span className="text-white font-bold text-sm">iPhone / iPad (Safari)</span>
+          </div>
+          <Step n={1} text='Open tag.iwonde.com in Safari (must be Safari, not Chrome).' />
+          <Step n={2} text='Tap the Share button at the bottom of the screen — the square with an arrow pointing up.' />
+          <Step n={3} text='Scroll down and tap "Add to Home Screen."' />
+          <Step n={4} text='Tap "Add" in the top-right corner.' />
+          <Step n={5} text='The iWonde Tag icon now appears on your home screen like any other app.' />
+        </div>
+
+        <div className="rounded-xl bg-navy-800 border border-navy-600 p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xl">🤖</span>
+            <span className="text-white font-bold text-sm">Android (Chrome)</span>
+          </div>
+          <Step n={1} text='Open tag.iwonde.com in Chrome.' />
+          <Step n={2} text='Tap the three-dot menu (⋮) in the top-right corner.' />
+          <Step n={3} text='Tap "Add to Home Screen" or "Install App."' />
+          <Step n={4} text='Tap "Add" to confirm.' />
+          <Step n={5} text='The iWonde Tag icon now appears on your home screen.' />
+        </div>
+
+        <P>Once installed, iWonde Tag opens full-screen without a browser bar, just like a native app. You can update it by simply visiting the site again — updates happen automatically.</P>
+        <P>iWonde Tag is not currently available in the Apple App Store or Google Play Store — the web version is the real app!</P>
       </Section>
 
       {/* ── Submit a Tag ─────────────────────────────────── */}

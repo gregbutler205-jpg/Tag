@@ -16,6 +16,7 @@ import Profile from './pages/Profile'
 import Help from './pages/Help'
 import Privacy from './pages/Privacy'
 import SignIn from './pages/SignIn'
+import Admin from './pages/Admin'
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/help"       element={<Help />} />
           <Route path="/privacy"    element={<Privacy />} />
           <Route path="/signin"     element={<SignIn />} />
+          <Route path="/admin"      element={<Admin />} />
         </Routes>
         <NavBar />
       </div>

@@ -183,16 +183,30 @@ export default function GroupRoom() {
 
   // ── Share / invite ───────────────────────────────────────────────────────────
   const handleShare = async () => {
+    const text = [
+      `Join my group "${group.name}" on iWonde Tag! 🏷️`,
+      ``,
+      `iWonde Tag is a free game where you spot vanity license plates, decode their hidden meanings, collect all 50 states, and compete with friends!`,
+      ``,
+      `👉 Visit tag.iwonde.com to play`,
+      ``,
+      `📲 To install on your phone:`,
+      `• iPhone: open in Safari → tap the Share icon → "Add to Home Screen"`,
+      `• Android: open in Chrome → tap the menu (⋮) → "Add to Home Screen"`,
+      ``,
+      `Then join my group using invite code: ${group.code}`,
+    ].join('\n')
+
     try {
       await navigator.share({
-        title: 'Join my group on iWonde Tag',
-        text: `Join my group "${group.name}" — use code ${group.code}`,
-        url: 'https://tag.iwonde.com/groups',
+        title: 'Join me on iWonde Tag!',
+        text,
+        url: 'https://tag.iwonde.com',
       })
     } catch {
       try {
-        await navigator.clipboard.writeText(group.code)
-        alert(`Code ${group.code} copied to clipboard!`)
+        await navigator.clipboard.writeText(text)
+        alert('Invite message copied to clipboard!')
       } catch {
         // silently fail
       }
@@ -288,14 +302,14 @@ export default function GroupRoom() {
           <h1 className="text-xl font-black text-white truncate">{group?.name || 'Group'}</h1>
           {group && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Invite code:</span>
-              <span className="text-xs font-mono font-bold text-brand-yellow tracking-widest">{group.code}</span>
+              <span className="text-xs text-slate-500">Code:</span>
+              <span className="text-sm font-mono font-bold text-brand-yellow tracking-widest">{group.code}</span>
               <button
                 onClick={handleShare}
-                className="text-slate-500 hover:text-white transition-colors text-sm leading-none"
+                className="flex items-center gap-1.5 bg-brand-blue hover:brightness-110 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all active:scale-95 shadow-glow"
                 title="Share invite"
               >
-                📤
+                📤 <span>Invite</span>
               </button>
             </div>
           )}

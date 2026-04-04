@@ -3,6 +3,7 @@ import multer from 'multer'
 import { interpretPlate, moderatePlate, challengeInterpretation } from '../lib/openai.js'
 import { cropForPlateDetection } from '../lib/imageCropper.js'
 import { detectPlateVision } from '../lib/visionPipeline.js'
+import { extractPlateText } from '../lib/ocr.js'
 import { optionalAuth } from '../lib/auth.js'
 import supabase from '../lib/supabase.js'
 
@@ -88,6 +89,24 @@ router.post('/challenge', optionalAuth, async (req, res, next) => {
       if (rpcErr) console.warn('[add_points rpc]', rpcErr.message)
     }
 
+    // Auto-queue to daily pool if user and AI agree (85%+ match = 'agree' verdict)
+    if (judgment.verdict === 'agree') {
+      const plateUpper2 = plateText?.toUpperCase().replace(/[^A-Z0-9 -]/g, '')
+      if (plateUpper2 && plateUpper2.length >= 2) {
+        const goesLiveAt = new Date(Date.now() + 5 * 24 * 3600000).toISOString()
+        supabase.from('daily_pool').upsert({
+          plate_text: plateUpper2,
+          state: state || null,
+          meaning: aiMeaning || judgment.revisedMeaning || plateUpper2,
+          source: 'user_submitted',
+          status: 'pending',
+          submitted_by: req.user?.id || null,
+          pending_since: new Date().toISOString(),
+          goes_live_at: goesLiveAt,
+        }, { onConflict: 'plate_text', ignoreDuplicates: true }).then(() => {}).catch(() => {})
+      }
+    }
+
     res.json(judgment)
   } catch (err) {
     next(err)
@@ -99,11 +118,21 @@ router.post('/ocr', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No photo uploaded' })
 
-    // Step 1: Heuristic crop — vehicle rear → plate zone → full fallback
     const { buffer: croppedBuffer, log: cropLog } = await cropForPlateDetection(req.file.buffer)
 
-    // Step 2: Vision pipeline — first pass + conditional escalation
-    const { text, meta } = await detectPlateVision(croppedBuffer, cropLog)
+    // Try Google Cloud Vision first — fast (~300ms)
+    let text = null
+    let meta = { ...cropLog, method: 'google_vision' }
+    try {
+      text = await extractPlateText(croppedBuffer)
+      console.log('[OCR] Google Vision result:', text)
+    } catch (gErr) {
+      console.warn('[OCR] Google Vision failed, falling back to GPT:', gErr.message)
+      // Fall back to GPT vision pipeline
+      const vResult = await detectPlateVision(croppedBuffer, cropLog)
+      text = vResult.text
+      meta = { ...vResult.meta, method: 'gpt_vision' }
+    }
 
     res.json({ text: text || null, meta })
   } catch (err) {
