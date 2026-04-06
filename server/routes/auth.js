@@ -77,6 +77,45 @@ router.post('/login', async (req, res, next) => {
   }
 })
 
+// GET /auth/me — fetch current user's points + states from DB (for cross-device sync)
+router.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    const { data: userData } = await supabase
+      .from('users')
+      .select('display_name, total_points')
+      .eq('id', req.user.id)
+      .single()
+
+    const { data: states } = await supabase
+      .from('state_collection')
+      .select('state')
+      .eq('user_id', req.user.id)
+
+    res.json({
+      id:              req.user.id,
+      name:            userData?.display_name || req.user.name,
+      email:           req.user.email,
+      points:          userData?.total_points  || 0,
+      statesCollected: states?.map(s => s.state) || [],
+    })
+  } catch (err) { next(err) }
+})
+
+// POST /auth/sync-points — add earned points to DB total
+router.post('/sync-points', requireAuth, async (req, res, next) => {
+  try {
+    const delta = parseInt(req.body.delta, 10)
+    if (!delta || delta <= 0) return res.status(400).json({ error: 'Invalid delta' })
+
+    const { error } = await supabase.rpc('add_points', {
+      p_user_id: req.user.id,
+      p_points:  delta,
+    })
+    if (error) console.warn('[sync-points rpc]', error.message)
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
 // PUT /auth/profile — update display name
 router.put('/profile', requireAuth, async (req, res, next) => {
   try {

@@ -1,24 +1,45 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import api from '../lib/api'
 
 const useStore = create(
   persist(
     (set, get) => ({
       user: null,
       setUser: (user) => set({ user }),
-      logout: () => { localStorage.removeItem('token'); set({ user: null }) },
+      logout: () => {
+        localStorage.removeItem('token')
+        set({ user: null, points: 0, statesCollected: [] })
+      },
       hasSeenWelcome: false,
       setHasSeenWelcome: (v) => set({ hasSeenWelcome: v }),
       avatarBase64: null,
       setAvatar: (b64) => set({ avatarBase64: b64 }),
+
+      // ── Points ─────────────────────────────────────────────────────────────
       points: 0,
-      addPoints: (n) => set((s) => ({ points: s.points + n })),
+      // setPoints: overwrite with authoritative DB value on sync
+      setPoints: (n) => set({ points: n }),
+      // addPoints: update local immediately + sync delta to DB (fire-and-forget)
+      addPoints: (n) => {
+        if (!n || n <= 0) return
+        set((s) => ({ points: s.points + n }))
+        if (localStorage.getItem('token')) {
+          api.post('/auth/sync-points', { delta: n }).catch(() => {})
+        }
+      },
+
+      // ── States ─────────────────────────────────────────────────────────────
       statesCollected: [],
+      // setStatesCollected: overwrite with authoritative DB list on sync
+      setStatesCollected: (arr) => set({ statesCollected: arr }),
       addState: (abbr) => set((s) =>
         s.statesCollected.includes(abbr)
           ? s
           : { statesCollected: [...s.statesCollected, abbr] }
       ),
+
+      // ── Streak ─────────────────────────────────────────────────────────────
       streak: 0,
       lastDailyDate: null,
       markDailyDone: () => {
@@ -31,15 +52,16 @@ const useStore = create(
             : 1
         })
       },
+
+      // ── Sharing ────────────────────────────────────────────────────────────
       hasEverShared: false,
       recordShare: () => {
-        // Award 50 pts on the very first share; sharing always works after that
         if (!get().hasEverShared) {
           set({ hasEverShared: true })
           get().addPoints(50)
-          return 'first'   // caller can show "+50 pts" message
+          return 'first'
         }
-        return 'shared'    // caller can show a plain "Thanks!" message
+        return 'shared'
       },
     }),
     { name: 'iwonde-tag-store' }

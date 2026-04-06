@@ -9,7 +9,7 @@ export default function SignIn() {
   const [email, setEmail]     = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
-  const { setUser }           = useStore()
+  const { setUser, setPoints, setStatesCollected } = useStore()
   const navigate              = useNavigate()
 
   const switchMode = (m) => { setMode(m); setError(null) }
@@ -21,6 +21,11 @@ export default function SignIn() {
       const { data } = await api.post('/auth/login', { username: username.trim() })
       localStorage.setItem('token', data.token)
       setUser(data.user)
+      // Sync points + states from DB immediately after sign-in
+      api.get('/auth/me').then(({ data: me }) => {
+        setPoints(me.points)
+        setStatesCollected(me.statesCollected)
+      }).catch(() => {})
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.error || 'Username not found. Check spelling or create an account.')
@@ -34,6 +39,9 @@ export default function SignIn() {
       const { data } = await api.post('/auth/register', { username: username.trim(), email: email.trim() })
       localStorage.setItem('token', data.token)
       setUser(data.user)
+      // New accounts start at 0 — no sync needed, but keep pattern consistent
+      setPoints(0)
+      setStatesCollected([])
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.error || 'Could not create account. Try a different username.')

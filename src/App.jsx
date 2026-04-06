@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import api from './lib/api'
 import Header from './components/Header'
 import NavBar from './components/NavBar'
 import SplashScreen from './components/SplashScreen'
@@ -21,7 +22,24 @@ import Feedback from './pages/Feedback'
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
-  const { hasSeenWelcome } = useStore()
+  const { hasSeenWelcome, setUser, setPoints, setStatesCollected } = useStore()
+
+  // On every app launch, if the user is signed in, pull their authoritative
+  // points + states from the DB so all devices stay in sync
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    api.get('/auth/me')
+      .then(({ data }) => {
+        setUser({ id: data.id, name: data.name, email: data.email })
+        setPoints(data.points)
+        setStatesCollected(data.statesCollected)
+      })
+      .catch(() => {
+        // Expired / invalid token — clear it silently
+        localStorage.removeItem('token')
+      })
+  }, [])
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#04080f' }}>
