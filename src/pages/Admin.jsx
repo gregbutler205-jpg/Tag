@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import api from '../lib/api'
 
@@ -95,14 +96,33 @@ export default function Admin() {
     doAction(id, path, 'DELETE')
   }
 
-  if (accessDenied) {
+  // Check if user is even logged in (no token = definitely not admin)
+  const isLoggedIn = !!localStorage.getItem('token')
+
+  if (!isLoggedIn || accessDenied) {
     return (
       <div className="pb-nav px-4 pt-3 max-w-lg mx-auto space-y-5">
         <div className="pt-2"><BackButton to="/" /></div>
-        <div className="glass-card rounded-2xl p-8 text-center space-y-3">
-          <div className="text-4xl">🚫</div>
-          <h2 className="text-lg font-black text-red-400">Access Denied</h2>
-          <p className="text-slate-500 text-sm">You don't have admin access to this panel.</p>
+        <div className="glass-card rounded-2xl p-10 text-center space-y-5 border border-navy-600">
+          <div className="text-6xl">🧙‍♂️</div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-white">Nothing to see here.</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Move along. These aren't the droids you're looking for.
+            </p>
+          </div>
+          <div className="w-16 h-px bg-navy-600 mx-auto" />
+          <p className="text-slate-600 text-xs">
+            {!isLoggedIn
+              ? 'You need to be signed in — and even then, probably not.'
+              : "Nice try. This area is for the wizard behind the curtain only."}
+          </p>
+          <Link
+            to="/"
+            className="inline-block bg-brand-blue hover:bg-brand-blue-light text-white font-bold px-6 py-2.5 rounded-xl transition-all text-sm"
+          >
+            Take me back
+          </Link>
         </div>
       </div>
     )

@@ -141,18 +141,53 @@ const EXCLUDE_WORDS = new Set([
 
 // ── Detect state from full-image text string ──────────────────────────────────
 function detectStateFromText(fullText) {
-  const upper = fullText.toUpperCase().replace(/\n/g, ' ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+  // Normalize: uppercase, collapse whitespace, strip non-alpha-numeric-space
+  const upper = fullText.toUpperCase()
+    .replace(/\n/g, ' ')
+    .replace(/[^A-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
-  // Check state names first (exact word match)
+  // Check full state names (handles multi-word like "NEW YORK")
   for (const [name, abbr] of Object.entries(STATE_NAME_MAP)) {
     if (upper.includes(name)) return abbr
   }
 
-  // Check slogans
+  // Check plate slogans
   for (const [slogan, abbr] of Object.entries(SLOGAN_MAP)) {
     if (upper.includes(slogan)) return abbr
   }
 
+  // Fallback: strip all spaces and try again (handles OCR spacing artifacts)
+  const compact = upper.replace(/\s+/g, '')
+  for (const [name, abbr] of Object.entries(STATE_NAME_MAP)) {
+    if (compact.includes(name.replace(/\s+/g, ''))) return abbr
+  }
+
+  return null
+}
+
+// ── Detect state from individual word annotations ─────────────────────────────
+// Catches cases where Vision splits multi-word state names across annotations
+function detectStateFromWords(wordAnnotations) {
+  if (!wordAnnotations?.length) return null
+
+  // Collect all cleaned words
+  const words = wordAnnotations
+    .map(a => (a.description || '').toUpperCase().replace(/[^A-Z]/g, ''))
+    .filter(Boolean)
+
+  // Try each consecutive 1, 2, and 3-word window against the state maps
+  for (let i = 0; i < words.length; i++) {
+    const w1 = words[i]
+    const w2 = i + 1 < words.length ? words[i] + ' ' + words[i + 1] : null
+    const w3 = i + 2 < words.length ? words[i] + ' ' + words[i + 1] + ' ' + words[i + 2] : null
+
+    for (const candidate of [w1, w2, w3].filter(Boolean)) {
+      if (STATE_NAME_MAP[candidate]) return STATE_NAME_MAP[candidate]
+      if (SLOGAN_MAP[candidate])     return SLOGAN_MAP[candidate]
+    }
+  }
   return null
 }
 
@@ -183,9 +218,11 @@ export async function extractPlateText(imageBuffer) {
   const annotations = data.responses?.[0]?.textAnnotations
   if (!annotations?.length) return { plateText: null, detectedState: null }
 
-  // ── Detect state from full text block ────────────────────────────────────
+  // ── Detect state — try full text first, then word-by-word fallback ──────
   const fullText = annotations[0].description || ''
-  const detectedState = detectStateFromText(fullText)
+  const detectedState =
+    detectStateFromText(fullText) ||
+    detectStateFromWords(wordAnnotations)
 
   // ── Find vanity plate text using bounding box HEIGHT ─────────────────────
   // The vanity text is the largest text on the plate (tallest bounding box)

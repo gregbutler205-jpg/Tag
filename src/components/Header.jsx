@@ -40,6 +40,7 @@ export default function Header({ logoVisible = true }) {
                 display: 'block',
                 opacity: logoVisible ? 1 : 0,
                 transition: logoVisible ? 'opacity 0.4s ease' : 'none',
+                mixBlendMode: 'multiply',
               }}
               onError={() => setImgFailed(true)}
             />

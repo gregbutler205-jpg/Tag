@@ -11,6 +11,7 @@ export default function Daily() {
   const [daily, setDaily]           = useState(null)
   const [guess, setGuess]           = useState('')
   const [submitted, setSubmitted]   = useState(false)
+  const [revealed, setRevealed]     = useState(false)
   const [result, setResult]         = useState(null)
   const [loading, setLoading]       = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -89,6 +90,19 @@ export default function Daily() {
     }
   }
 
+  const handleReveal = () => {
+    setRevealed(true)
+    setSubmitted(true)
+    markDailyDone()
+    // Sync to groups with 0 score (fire and forget)
+    api.post('/groups/daily-sync', {
+      score: 0,
+      timeSeconds: startRef.current ? Math.round((Date.now() - startRef.current) / 1000) : 0,
+      date: new Date().toDateString(),
+      guess: '(skipped)',
+    }).catch(() => {})
+  }
+
   return (
     <div className="pb-nav max-w-lg mx-auto">
       <SafetyBanner />
@@ -158,10 +172,25 @@ export default function Daily() {
                   ? <span className="flex items-center justify-center gap-2"><span className="animate-spin">⟳</span> Decoding...</span>
                   : '✨ Submit Guess'}
               </button>
+
+              {/* I Don't Know button */}
+              <button
+                onClick={handleReveal}
+                className="w-full text-slate-500 hover:text-slate-300 text-sm font-semibold py-2 transition-colors"
+              >
+                🤷 I Don't Know. Show Me.
+              </button>
             </div>
           )}
 
-          {submitted && result && (
+          {submitted && revealed && daily?.meaning && (
+            <div className="pt-2 border-t border-navy-600 space-y-2">
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">The Answer</p>
+              <p className="text-white font-semibold text-base leading-snug">{daily.meaning}</p>
+              <p className="text-slate-500 text-xs">No points this time — come back tomorrow! 🌟</p>
+            </div>
+          )}
+          {submitted && result && !revealed && (
             <div className="pt-1 border-t border-navy-600 space-y-1">
               {result.feedback && (
                 <p className="text-slate-400 text-sm">{result.feedback}</p>
@@ -174,8 +203,10 @@ export default function Daily() {
       {/* Tomorrow teaser */}
       {submitted && (
         <div className="glass-card rounded-2xl p-4 text-center space-y-1 animate-fade-up">
-          <div className="text-2xl">🌟</div>
-          <div className="text-white font-semibold">Streak saved!</div>
+          <div className="text-2xl">{revealed ? '📖' : '🌟'}</div>
+          <div className="text-white font-semibold">
+            {revealed ? 'Now you know!' : 'Streak saved!'}
+          </div>
           <div className="text-slate-500 text-sm">A new plate unlocks tomorrow</div>
         </div>
       )}

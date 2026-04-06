@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import SafetyBanner from '../components/SafetyBanner'
+import FeedbackFab from '../components/FeedbackFab'
 
 function StatCard({ icon, value, label }) {
   return (
@@ -124,6 +125,8 @@ export default function Home() {
       </div>
 
       </div>
+
+      <FeedbackFab />
     </div>
   )
 }
