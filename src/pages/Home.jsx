@@ -41,21 +41,29 @@ export default function Home() {
   const [shareMsg, setShareMsg] = useState('')
 
   async function handleShare() {
-    const shareData = {
-      title: 'iWonde Tag',
-      text: 'Join me on iWonde Tag — spot vanity license plates, decode their meanings, and collect all 50 states! 🏷️\n\n📲 To install on your phone:\n• iPhone: open the link in Safari → tap the Share icon → "Add to Home Screen"\n• Android: open the link in Chrome → tap the menu (⋮) → "Add to Home Screen"\n\n',
-      url: 'https://tag.iwonde.com',
-    }
+    const subject = 'Check out iWonde Tag!'
+    const body = [
+      'Join me on iWonde Tag — spot vanity license plates, decode their hidden meanings, collect all 50 states, and compete with friends! 🏷️',
+      '',
+      'To install the free app on your phone:',
+      '• iPhone: open tag.iwonde.com in Safari → tap the Share icon (box with arrow) → "Add to Home Screen"',
+      '• Android: open tag.iwonde.com in Chrome → tap the menu (three dots) → "Add to Home Screen"',
+      '',
+      'Play here: https://tag.iwonde.com',
+    ].join('\n')
+
     try {
       if (navigator.share) {
-        await navigator.share(shareData)
+        // Mobile: use native share sheet
+        await navigator.share({ title: 'iWonde Tag', text: body, url: 'https://tag.iwonde.com' })
       } else {
-        await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`)
+        // Desktop: open email client with subject + full message pre-filled and editable
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
       }
       const result = recordShare()
       setShareMsg(result === 'first' ? '+50 pts! Thanks for sharing 🎉' : 'Thanks for spreading the word! 🎉')
     } catch {
-      // user cancelled share sheet — no message
+      // User cancelled — no message
     }
     setTimeout(() => setShareMsg(''), 3000)
   }

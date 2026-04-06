@@ -183,33 +183,31 @@ export default function GroupRoom() {
 
   // ── Share / invite ───────────────────────────────────────────────────────────
   const handleShare = async () => {
-    const text = [
+    const subject = `Join my group "${group.name}" on iWonde Tag!`
+    const body = [
       `Join my group "${group.name}" on iWonde Tag! 🏷️`,
       ``,
       `iWonde Tag is a free game where you spot vanity license plates, decode their hidden meanings, collect all 50 states, and compete with friends!`,
       ``,
-      `👉 Visit tag.iwonde.com to play`,
+      `To install the free app on your phone:`,
+      `• iPhone: open tag.iwonde.com in Safari → tap the Share icon (box with arrow) → "Add to Home Screen"`,
+      `• Android: open tag.iwonde.com in Chrome → tap the menu (three dots) → "Add to Home Screen"`,
       ``,
-      `📲 To install on your phone:`,
-      `• iPhone: open in Safari → tap the Share icon → "Add to Home Screen"`,
-      `• Android: open in Chrome → tap the menu (⋮) → "Add to Home Screen"`,
+      `Once you're in, join my group using invite code: ${group.code}`,
       ``,
-      `Then join my group using invite code: ${group.code}`,
+      `Play here: https://tag.iwonde.com`,
     ].join('\n')
 
     try {
-      await navigator.share({
-        title: 'Join me on iWonde Tag!',
-        text,
-        url: 'https://tag.iwonde.com',
-      })
-    } catch {
-      try {
-        await navigator.clipboard.writeText(text)
-        alert('Invite message copied to clipboard!')
-      } catch {
-        // silently fail
+      if (navigator.share) {
+        // Mobile: use native share sheet
+        await navigator.share({ title: subject, text: body, url: 'https://tag.iwonde.com' })
+      } else {
+        // Desktop: open email client with subject + full message pre-filled and editable
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
       }
+    } catch {
+      // User cancelled or share unavailable — silently fail
     }
   }
 
