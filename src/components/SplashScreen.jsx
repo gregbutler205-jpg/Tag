@@ -49,7 +49,7 @@ export default function SplashScreen({ onComplete }) {
       }}>
         {!imgError ? (
           <img
-            src="/logo-splash.png"
+            src="/logo-splash.jpg"
             alt="iWonde Tag"
             style={{ height: '220px', width: 'auto', display: 'block' }}
             onError={() => setImgError(true)}

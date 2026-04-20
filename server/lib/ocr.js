@@ -218,21 +218,22 @@ export async function extractPlateText(imageBuffer) {
   const annotations = data.responses?.[0]?.textAnnotations
   if (!annotations?.length) return { plateText: null, detectedState: null }
 
+  // ── Word annotations (index 0 is the full-text composite) ───────────────
+  const wordAnnotations = annotations.slice(1)
+
   // ── Detect state — try full text first, then word-by-word fallback ──────
   const fullText = annotations[0].description || ''
   const detectedState =
     detectStateFromText(fullText) ||
     detectStateFromWords(wordAnnotations)
 
-  // ── Find vanity plate text using bounding box HEIGHT ─────────────────────
-  // The vanity text is the largest text on the plate (tallest bounding box)
-  const wordAnnotations = annotations.slice(1)
-
   if (!wordAnnotations.length) {
     return { plateText: fallbackExtract(fullText), detectedState }
   }
 
-  // Score each word by bounding box height (font size proxy)
+  // ── Score each word by bounding box HEIGHT + track spatial position ──────
+  // We collect ALL plate-format tokens so we can reconstruct multi-word plates
+  // like "MZ MEK4" instead of only returning the tallest single token.
   const candidates = []
   for (const ann of wordAnnotations) {
     const clean = (ann.description || '').replace(/[^A-Z0-9]/gi, '').toUpperCase()
@@ -246,22 +247,23 @@ export async function extractPlateText(imageBuffer) {
     // Skip if it looks like a state name (single word match)
     if (STATE_NAME_MAP[clean]) continue
 
-    // Calculate bounding box height
+    // Calculate bounding box dimensions and position
     const verts = ann.boundingPoly?.vertices || []
     const ys = verts.map(v => v.y || 0).filter(y => y > 0)
+    const xs = verts.map(v => v.x || 0).filter(x => x > 0)
+
     const boxHeight = ys.length ? Math.max(...ys) - Math.min(...ys) : 0
+    const centerY   = ys.length ? (Math.min(...ys) + Math.max(...ys)) / 2 : 9999
+    const minX      = xs.length ? Math.min(...xs) : 9999   // leftmost edge for L→R sort
 
-    // Also track Y position (top of image = lower Y value)
-    const centerY = ys.length ? (Math.min(...ys) + Math.max(...ys)) / 2 : 9999
-
-    candidates.push({ text: clean, boxHeight, centerY })
+    candidates.push({ text: clean, boxHeight, centerY, minX })
   }
 
   if (!candidates.length) {
     return { plateText: fallbackExtract(fullText), detectedState }
   }
 
-  // Sort by box height descending — tallest text = vanity plate
+  // Sort by box height descending — tallest text = main plate text
   // Use centerY as tiebreaker (prefer vertically centered text)
   candidates.sort((a, b) => {
     const heightDiff = b.boxHeight - a.boxHeight
@@ -271,11 +273,37 @@ export async function extractPlateText(imageBuffer) {
 
   console.log(
     '[OCR] candidates by height:',
-    candidates.slice(0, 5).map(c => `${c.text}(h=${c.boxHeight})`).join('  ')
+    candidates.slice(0, 8).map(c =>
+      `${c.text}(h=${c.boxHeight},y=${Math.round(c.centerY)},x=${Math.round(c.minX)})`
+    ).join('  ')
   )
   console.log('[OCR] detected state:', detectedState)
 
-  return { plateText: candidates[0].text, detectedState }
+  // ── Spatially group all tokens on the same visual row as the top candidate ─
+  // Plates like "MZ MEK4" have two separate tokens that Vision reads as
+  // individual words. We collect them all, sort left-to-right, and join.
+  //
+  // Same-row criteria:
+  //   1. Center Y is within ±75% of the top token's box height (same horizontal band)
+  //   2. Box height is at least 40% of the top token's height (filters out tiny state text)
+  const topCandidate    = candidates[0]
+  const rowTolerance    = Math.max(topCandidate.boxHeight * 0.75, 20)
+  const minHeightThresh = topCandidate.boxHeight * 0.40
+
+  const plateRow = candidates.filter(c =>
+    Math.abs(c.centerY - topCandidate.centerY) <= rowTolerance &&
+    c.boxHeight >= minHeightThresh
+  )
+
+  // Sort left-to-right by leftmost X coordinate
+  plateRow.sort((a, b) => a.minX - b.minX)
+
+  const plateText = plateRow.map(c => c.text).join(' ').trim()
+
+  console.log('[OCR] plate row tokens:', plateRow.map(c => c.text).join(' | '))
+  console.log('[OCR] final plateText:', plateText)
+
+  return { plateText, detectedState }
 }
 
 function fallbackExtract(fullText) {

@@ -111,6 +111,20 @@ Alternative ranking and confidence:
     - the character pattern requires too many assumptions
     - no strong clean reading exists
 
+Vanity plate abbreviation reference (BAAC guide):
+Use the following known vanity plate codes as a reference when decoding plates. These can appear alone or combined with other characters. Multiple repeated letters equal a multiple of the single-letter meaning (e.g., TT = tease, CC = seize).
+
+Numbers as sounds/words:
+0=zero/nothin' | 1=one/want | 2=to/too/two (also starts "to"-sound words: 2DAY=today, 2TH=tooth, 2N=tune, 2LY=truly, 2M8O=tomato, 2Q=took you) | 4=for/fore/four (also replaces "fo": 4ORD=ford, 4EVR=forever, 4N=foreign, 4ST=forest, 4RE=Ferrari, 4PLA=foreplay) | 6=sex/sexy (6A=sexy, 6UAL=sexual, 6S=success, 6SR=successor) | 8=ate/ain't | 9=nein(no) | 0=O substitute
+
+Number combos: 10C=Tennessee | 10S=tennis | 1CE=once | 1DR=wonder | 1DRFL=wonderful | 1E6=a million | 1E9=a billion | 22=Tuesday | 404=not found | 411=information | 44UM=foursome | 4K=fork | 4NIK8=fornicate | 4Q2=f-you-too | 50=police/cops | 911=emergency
+
+Single letters as words:
+A=eh | B=be | C=see/sea | D=the/de | F=if | G=gee | I=eye | K=ok/'kay | L=hell | M=am | N=and/in | O=oh | Q=cue/queue | R=are | T=tea/tee | U=you | Y=why | Z=see/the
+
+Letter+number combos (selected):
+A4=afford | A55=ass | AV8=aviate | B8=bait | B9=benign | B10=beaten | BA6=basics | BG8S=Bill Gates | BL8D=belated | BR8=berate | BYU=bayou/by-you | BZ=busy | CC=seize | CLA6=classics | CMUTE=commute | CR8=crate | CRE8=create | CRZ=cruise | D8=date | D8N=datin' | D8R=dater | D9=denyin' | DA=the | DMN=demon | DNIL=denial | DU=do-you | DVS=devious | DV8=deviate | DZRV=deserve | EDUC8=educate | EL8=elate | EL8D=elated | ENUF=enough | EZ=easy | FASN8=fascinate | F8=fate | FN=fun | FREQ=freak | FX=effects/affects | FXION=affection | FXION8=affectionate | GN=goin' | GND=ground | GR8=great/grate | H8=hate | H20=water | HD=head | HM=home | HORM1=hormone | HYT=height | IR8=irate | JMN=jammin' | KIX=kicks | L8=late | L8R=later | LDY=lady | LMTD=limited | LUV=love | LV=love | LVS=loves | LYT=light | M8=mate | MN=man | MN8=emanate | MR=more | MS=Miss | MT=empty | MV=move | MVN=movin' | MYT=might | MZ=Missus | MZLTF=mazel-tov | N2=into | N4C=enforce | N4CER=enforcer | NE=any | NE1=anyone | NOZ=nosy | NRG=energy | NT=night | NUTN=nothin' | NV=envy | NVR=never | NVS=envious | NYT=night | OL=old | ONRY=ornery | OVR=over | PA=pay | PNBL=pinball | PP=pee-pee | PRFXN=perfection | PWR=power | QIK=quick | QRT=court | QS10=question | QT=cute/cutie | R8=rate | R8D=rated | R8RS=Raiders | RESQ=rescue | RETD=retired | RT=arty | RTCUL8=articulate | RYT=right/write | RYTN=writin' | RZN=raisin' | SED8=sedate | SN=soon | SNGR=singer | ST8=state | STR8=straight | STR8N=straighten | SYCD=psyched | SYT=sight | TA2=tattoo | TA2D=tattooed | THRP=therapy | TM=time | TM8=tomato | TNT=dynamite | TOTL=total | TRK=truck | TT=tease | TYT=tight | U4IA=euphoria | U4IC=euphoric | UDR=other(udder) | UNEEK=unique | UR=your | W8=wait/weight | W8R=waiter | WMN=woman/women | WYT=white | XIS=tennis | XLR8=accelerate | XMN=examine | XMS=Christmas | XNTRK=eccentric | XNTU8=accentuate | XS=excess | XTC=ecstasy | YFS=wife's | YL=while | YN=wine/whine | YQ=like-you | YRS=wires | YY=too-wise | ZIPN=zippin' | ZZZZ=sleeping
+
 Hard safety and tone rule:
 46. Never return crude, vulgar, obscene, sexual, profane, or insulting interpretations.
 47. Do not use them as the main interpretation.
