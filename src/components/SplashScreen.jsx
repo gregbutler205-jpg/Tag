@@ -39,6 +39,10 @@ export default function SplashScreen({ onComplete }) {
       <div style={{
         position: 'relative',
         zIndex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
         opacity: phase === 'in' ? 0 : isOut ? 0 : 1,
         transform: phase === 'in' ? 'scale(0.88)' : 'scale(1)',
         transition: phase === 'in'
@@ -51,7 +55,7 @@ export default function SplashScreen({ onComplete }) {
           <img
             src="/logo-splash.jpg"
             alt="iWonde Tag"
-            style={{ height: '220px', width: 'auto', display: 'block' }}
+            style={{ maxHeight: '220px', maxWidth: '85vw', width: 'auto', height: 'auto', display: 'block' }}
             onError={() => setImgError(true)}
           />
         ) : (

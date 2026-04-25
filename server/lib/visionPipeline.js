@@ -12,8 +12,8 @@ import OpenAI from 'openai'
 
 // ── Config (all overridable via .env) ────────────────────────────────────────
 const CFG = {
-  FIRST_PASS_MODEL:            process.env.FIRST_PASS_MODEL            || 'gpt-5.4-mini',
-  ESCALATION_MODEL:            process.env.ESCALATION_MODEL            || 'gpt-5.4',
+  FIRST_PASS_MODEL:            process.env.FIRST_PASS_MODEL            || 'gpt-4o-mini',
+  ESCALATION_MODEL:            process.env.ESCALATION_MODEL            || 'gpt-4o',
   CONFIDENCE_THRESHOLD:        parseFloat(process.env.CONFIDENCE_THRESHOLD    || '0.85'),
   FIRST_PASS_DETAIL:           process.env.FIRST_PASS_DETAIL           || 'high',
   ESCALATION_DETAIL:           process.env.ESCALATION_DETAIL           || 'high',
