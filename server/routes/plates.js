@@ -61,23 +61,23 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
     }
 
     // ── Auto-queue to daily pool based on AI confidence ─────────────────────
-    // ≥ 85%  → high confidence, queued as pending (ready for quick approval)
-    // 75–84% → moderate confidence, queued as pending (review more carefully)
-    // < 75%  → not queued automatically
+    // ≥ 85%  → approved automatically, goes live in Daily Tag rotation
+    // 75–84% → pending, requires admin approval before going live
+    // < 75%  → not added to pool
     const confidencePct = Math.round(result.confidence * 100)
     if (confidencePct >= 75 && plateUpper.length >= 2) {
-      const source = confidencePct >= 85 ? 'ai_high_confidence' : 'ai_confident'
+      const isHighConfidence = confidencePct >= 85
       supabase.from('daily_pool').upsert({
         plate_text:    plateUpper,
         state:         state || null,
         meaning:       result.primary,
-        source,
-        status:        'pending',
+        source:        isHighConfidence ? 'ai_high_confidence' : 'ai_confident',
+        status:        isHighConfidence ? 'approved' : 'pending',
         submitted_by:  req.user?.id || null,
         pending_since: new Date().toISOString(),
         goes_live_at:  new Date(Date.now() + 7 * 24 * 3600000).toISOString(),
       }, { onConflict: 'plate_text', ignoreDuplicates: true }).then(() => {}).catch(() => {})
-      console.log(`[pool] Auto-queued ${plateUpper} (${confidencePct}% — ${source})`)
+      console.log(`[pool] ${isHighConfidence ? 'Auto-approved' : 'Queued for review'}: ${plateUpper} (${confidencePct}%)`)
     }
 
     res.json(result)
