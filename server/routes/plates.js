@@ -60,6 +60,22 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
       }
     }
 
+    // ── Auto-queue to daily pool if AI confidence ≥ 75% ──────────────────────
+    // Runs for all users (guest or signed-in) — fire-and-forget
+    if (result.confidence >= 0.75 && plateUpper.length >= 2) {
+      supabase.from('daily_pool').upsert({
+        plate_text:    plateUpper,
+        state:         state || null,
+        meaning:       result.primary,
+        source:        'ai_confident',
+        status:        'pending',
+        submitted_by:  req.user?.id || null,
+        pending_since: new Date().toISOString(),
+        goes_live_at:  new Date(Date.now() + 7 * 24 * 3600000).toISOString(),
+      }, { onConflict: 'plate_text', ignoreDuplicates: true }).then(() => {}).catch(() => {})
+      console.log(`[pool] Auto-queued ${plateUpper} (confidence ${Math.round(result.confidence * 100)}%)`)
+    }
+
     res.json(result)
   } catch (err) {
     next(err)
