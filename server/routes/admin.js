@@ -5,9 +5,13 @@ import supabase from '../lib/supabase.js'
 const router = Router()
 
 // ── Admin check middleware ────────────────────────────────────────────────────
+// Accepts either email (ADMIN_EMAILS) or UUID (ADMIN_USER_IDS) — either env var works
 function requireAdmin(req, res, next) {
-  const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
-  if (!req.user?.id || !adminIds.includes(req.user.id)) {
+  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  const adminIds    = (process.env.ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
+  const emailMatch  = req.user?.email && adminEmails.includes(req.user.email.toLowerCase())
+  const idMatch     = req.user?.id    && adminIds.includes(req.user.id)
+  if (!emailMatch && !idMatch) {
     return res.status(403).json({ error: 'Admin access required' })
   }
   next()
