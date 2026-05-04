@@ -15,7 +15,7 @@ export default function Header({ logoVisible = true }) {
         boxShadow: '0 2px 20px rgba(245,158,11,0.15)',
       }}
     >
-      <div className="max-w-lg mx-auto flex items-center justify-between" style={{ minHeight: '220px' }}>
+      <div className="max-w-lg mx-auto flex items-center justify-between" style={{ minHeight: '310px' }}>
 
         {/* Left — Help button */}
         <Link to="/help"
@@ -34,9 +34,9 @@ export default function Header({ logoVisible = true }) {
               alt="Tag Wizard"
               data-splash-target
               style={{
-                height: '198px',
+                height: '297px',
                 width: 'auto',
-                maxWidth: '420px',
+                maxWidth: '630px',
                 display: 'block',
                 opacity: logoVisible ? 1 : 0,
                 transition: logoVisible ? 'opacity 0.4s ease' : 'none',
