@@ -20,7 +20,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,png,ico,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
       },
       manifest: {
         name: 'Tag Wizard',
