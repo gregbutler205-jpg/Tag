@@ -13,9 +13,11 @@ export default function Header({ logoVisible = true }) {
         background: 'linear-gradient(135deg, #0c1628 0%, #122040 50%, #0c1628 100%)',
         borderBottom: '2px solid #f59e0b',
         boxShadow: '0 2px 20px rgba(245,158,11,0.15)',
+        paddingTop: '5mm',
+        paddingBottom: '5mm',
       }}
     >
-      <div className="max-w-lg mx-auto flex items-center justify-between" style={{ minHeight: '260px' }}>
+      <div className="max-w-lg mx-auto flex items-center justify-between">
 
         {/* Left — Help button */}
         <Link to="/help"

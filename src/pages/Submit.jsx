@@ -9,6 +9,7 @@ import BackButton from '../components/BackButton'
 import SafetyBanner from '../components/SafetyBanner'
 import { track } from '../lib/analytics'
 import { getEasterEggPhrase, EASTER_EGG_PROBABILITY } from '../lib/wizardPhrases'
+import { toPng } from 'html-to-image'
 
 const MODES = { camera: 'camera', manual: 'manual' }
 const TODAY_KEY = () => `iwt_first_decode_${new Date().toDateString()}`
@@ -140,6 +141,7 @@ export default function Submit() {
   const [stateAutoFilled, setStateAutoFilled] = useState(false)  // true when state came from OCR
   const fileInputRef  = useRef(null)
   const plateInputRef = useRef(null)
+  const resultRef     = useRef(null)
   const [stateAdded, setStateAdded]         = useState(false)
   const [easterEggPhrase, setEasterEggPhrase] = useState(null)
   const [sessionDecodes, setSessionDecodes]   = useState(0)
@@ -305,6 +307,28 @@ export default function Submit() {
       setChallenge({ verdict: 'disagree', reasoning: 'Could not reach the judge — try again.', bonusPoints: 0 })
     } finally {
       setChallenging(false)
+    }
+  }
+
+  /* ── Save as Image ──────────────────────────────────────── */
+  const [saving, setSaving] = useState(false)
+  const saveAsImage = async () => {
+    if (!resultRef.current) return
+    setSaving(true)
+    try {
+      const dataUrl = await toPng(resultRef.current, {
+        backgroundColor: '#0d1626',
+        pixelRatio: 2,
+      })
+      const link = document.createElement('a')
+      link.download = `${plateText || 'plate'}-tag-wizard.png`
+      link.href = dataUrl
+      link.click()
+      track('save_as_image', { plate_text: plateText })
+    } catch (err) {
+      console.error('Save as image failed', err)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -546,7 +570,21 @@ export default function Submit() {
       {/* ── Result + Challenge ── */}
       {result && (
         <div className="space-y-4 animate-fade-up">
-          <PlateCard plate={plateText} state={state || undefined} result={result} animate easterEggPhrase={easterEggPhrase} />
+          <div ref={resultRef} className="rounded-2xl overflow-hidden">
+            <PlateCard plate={plateText} state={state || undefined} result={result} animate easterEggPhrase={easterEggPhrase} />
+          </div>
+
+          {/* Save as Image */}
+          <button
+            onClick={saveAsImage}
+            disabled={saving}
+            className="w-full flex items-center justify-center gap-2 glass-card hover:border-navy-500 text-slate-300 hover:text-white font-semibold py-3 rounded-2xl text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            {saving
+              ? <><span className="animate-spin">⟳</span> Saving...</>
+              : <><span>💾</span> Save as Image</>
+            }
+          </button>
 
           {/* Challenge verdict banner */}
           {challenge && (
