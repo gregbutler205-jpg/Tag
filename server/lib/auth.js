@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken'
 
-const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required — set it in Render (or .env for local dev)')
+}
+const SECRET = process.env.JWT_SECRET
 
 export function signToken(payload) {
   return jwt.sign(payload, SECRET, { expiresIn: '30d' })

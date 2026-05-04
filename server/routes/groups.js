@@ -164,6 +164,16 @@ router.post('/:id/states', requireAuth, async (req, res, next) => {
       { onConflict: 'group_id,user_id,state', ignoreDuplicates: true }
     )
 
+    // Also credit personal collection if this state is new for the user
+    await supabase.from('state_collection').upsert(
+      {
+        user_id:    req.user.id,
+        state,
+        first_seen: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,state', ignoreDuplicates: true }
+    ).catch(() => {})
+
     // In 'both' or 'states' mode, award bonus points
     const { data: group } = await supabase
       .from('groups')

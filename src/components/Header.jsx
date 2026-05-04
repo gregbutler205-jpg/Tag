@@ -31,7 +31,7 @@ export default function Header({ logoVisible = true }) {
           {!imgFailed ? (
             <img
               src="/logo-dark-navy.png"
-              alt="iWonde Tag"
+              alt="Tag Wizard"
               data-splash-target
               style={{
                 height: '132px',
@@ -46,10 +46,10 @@ export default function Header({ logoVisible = true }) {
           ) : (
             <div className="flex items-baseline gap-1 select-none"
               style={{ opacity: logoVisible ? 1 : 0, transition: logoVisible ? 'opacity 0.4s ease' : 'none' }}>
-              <span className="text-white font-extrabold text-3xl tracking-tight">iWonde</span>
+              <span className="text-white font-extrabold text-3xl tracking-tight">Tag</span>
               <span className="font-black text-4xl tracking-widest"
                 style={{ color: '#f59e0b', textShadow: '0 0 16px rgba(245,158,11,0.6)' }}>
-                TAG
+                WIZARD
               </span>
             </div>
           )}

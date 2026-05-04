@@ -11,7 +11,7 @@ export default function Logo({ size = 'md', showTagline = false }) {
     <div className="flex flex-col items-center gap-1 select-none">
       <img
         src="/logo.jpg"
-        alt="iWonde Tag — Decode. Compete. Collect."
+        alt="Tag Wizard — Decode. Compete. Collect."
         className={`${s.img} w-auto object-contain drop-shadow-2xl`}
         onError={(e) => { e.currentTarget.style.display = 'none' }}
       />

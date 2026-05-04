@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import api from './lib/api'
 import Header from './components/Header'
 import NavBar from './components/NavBar'
@@ -19,6 +19,21 @@ import Privacy from './pages/Privacy'
 import SignIn from './pages/SignIn'
 import Admin from './pages/Admin'
 import Feedback from './pages/Feedback'
+
+function NotFound() {
+  return (
+    <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center gap-4">
+      <div className="text-6xl">🏷️</div>
+      <h1 className="text-2xl font-black text-white">Page Not Found</h1>
+      <p className="text-slate-500 text-sm max-w-xs">
+        This page doesn't exist — it may have moved or the link was mistyped.
+      </p>
+      <Link to="/" className="mt-2 bg-brand-blue hover:brightness-110 text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-[0.98]">
+        Back to Home
+      </Link>
+    </div>
+  )
+}
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
@@ -66,6 +81,7 @@ export default function App() {
           <Route path="/signin"     element={<SignIn />} />
           <Route path="/admin"      element={<Admin />} />
           <Route path="/feedback"   element={<Feedback />} />
+          <Route path="*"           element={<NotFound />} />
         </Routes>
         <NavBar />
       </div>

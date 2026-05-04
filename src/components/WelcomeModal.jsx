@@ -41,18 +41,18 @@ export default function WelcomeModal() {
         {/* ── Scrollable body ─────────────────────────────── */}
         <div className="overflow-y-auto flex-1 px-6 py-4">
 
-          {/* ── STEP 0: What is iWonde Tag ─────────────────── */}
+          {/* ── STEP 0: What is Tag Wizard ─────────────────── */}
           {step === 0 && (
             <div className="space-y-5 text-center">
               <div>
                 <div className="text-6xl mb-3">🏷️</div>
-                <h1 className="text-2xl font-black text-white">Welcome to iWonde Tag</h1>
+                <h1 className="text-2xl font-black text-white">Welcome to Tag Wizard</h1>
                 <p className="text-slate-400 text-sm mt-1">The vanity plate spotting &amp; decoding game</p>
               </div>
 
               <p className="text-slate-400 text-sm leading-relaxed text-left">
-                iWonde Tag turns every vanity license plate you spot on the road into a puzzle.
-                Submit the plate, let the AI decode it, then try to beat the AI with your own
+                Tag Wizard turns every vanity license plate you spot on the road into a puzzle.
+                Submit the plate, let The Wizard decode it, then try to beat The Wizard with your own
                 interpretation. Earn points, collect all 50 states, and compete on the global leaderboard.
               </p>
 
@@ -63,7 +63,7 @@ export default function WelcomeModal() {
                   <span className="text-red-300 font-black text-sm uppercase tracking-wide">Safety First</span>
                 </div>
                 <p className="text-red-200 text-sm leading-relaxed">
-                  <strong>Never use this app while driving.</strong> iWonde Tag is designed
+                  <strong>Never use this app while driving.</strong> Tag Wizard is designed
                   for <strong>passengers</strong> and players who are safely parked.
                 </p>
                 <p className="text-red-300/70 text-xs leading-relaxed">
@@ -76,8 +76,8 @@ export default function WelcomeModal() {
               {/* Feature cards */}
               <div className="space-y-2 text-left">
                 {[
-                  { emoji: '🤖', title: 'AI Decodes Every Plate',   desc: 'Powered by xAI Grok — from Common to Legendary rarity.' },
-                  { emoji: '🏆', title: 'Can You Beat the AI?',     desc: 'Submit your own interpretation for bonus points.' },
+                  { emoji: '🤖', title: 'The Wizard Decodes Every Plate',   desc: 'Powered by xAI Grok — from Common to Legendary rarity.' },
+                  { emoji: '🏆', title: 'Can You Beat The Wizard?',     desc: 'Submit your own interpretation for bonus points.' },
                   { emoji: '🏷️', title: 'Tag of the Day',           desc: 'One global daily challenge — everyone plays the same plate.' },
                   { emoji: '👥', title: 'Group Road Trip Mode',      desc: 'Compete live with friends and family in the car.' },
                   { emoji: '🗺️', title: 'State Collection',          desc: 'Spot plates from all 50 states + D.C.' },
@@ -102,7 +102,7 @@ export default function WelcomeModal() {
                 <div className="text-5xl mb-2">📲</div>
                 <h2 className="text-xl font-black text-white">Add to Your Home Screen</h2>
                 <p className="text-slate-400 text-sm mt-1">
-                  iWonde Tag installs like an app — no App Store needed.
+                  Tag Wizard installs like an app — no App Store needed.
                 </p>
               </div>
 
@@ -110,7 +110,7 @@ export default function WelcomeModal() {
                 <div className="bg-emerald-900/40 border border-emerald-700/50 rounded-xl px-4 py-4 text-center">
                   <div className="text-3xl mb-2">✅</div>
                   <p className="text-emerald-300 text-sm font-semibold">Already installed!</p>
-                  <p className="text-slate-400 text-xs mt-1">iWonde Tag is running as an installed app.</p>
+                  <p className="text-slate-400 text-xs mt-1">Tag Wizard is running as an installed app.</p>
                 </div>
               ) : (
                 <>
@@ -128,7 +128,7 @@ export default function WelcomeModal() {
                         'Open this page in Safari (not Chrome)',
                         'Tap the Share button ↑ at the bottom of Safari',
                         'Scroll down and tap "Add to Home Screen"',
-                        'Tap Add — the iWonde Tag icon appears on your home screen',
+                        'Tap Add — the Tag Wizard icon appears on your home screen',
                         'Open the icon to launch the full app experience',
                       ].map((t, i) => (
                         <div key={i} className="flex gap-3 items-start">
@@ -217,7 +217,7 @@ export default function WelcomeModal() {
                     'Tap "Submit a Plate" from the home screen',
                     'Take a photo or type the plate text',
                     'Select the state and tap Decode',
-                    'Try "Can You Beat AI?" for bonus points',
+                    'Try "Can You Beat The Wizard?" for bonus points',
                   ].map((t, i) => (
                     <div key={i} className="flex gap-3 items-start">
                       <span className="shrink-0 w-5 h-5 rounded-full bg-brand-blue text-white text-[10px] font-black flex items-center justify-center mt-0.5">{i + 1}</span>

@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import api from '../lib/api'
 import BackButton from '../components/BackButton'
 import SafetyBanner from '../components/SafetyBanner'
+import { track } from '../lib/analytics'
 
 const fmtTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
@@ -62,6 +63,12 @@ export default function Daily() {
       setSubmitted(true)
       addPoints(data.points || 100)
       markDailyDone()
+      track('daily_completed', {
+        plate:           daily?.plate,
+        points:          data.points || 100,
+        elapsed_seconds: startRef.current ? Math.round((Date.now() - startRef.current) / 1000) : 0,
+        streak,
+      })
 
       // Sync to daily groups (fire and forget)
       const elapsedNow = startRef.current ? Math.round((Date.now() - startRef.current) / 1000) : 0
@@ -94,6 +101,7 @@ export default function Daily() {
     setRevealed(true)
     setSubmitted(true)
     markDailyDone()
+    track('daily_revealed', { plate: daily?.plate, elapsed_seconds: startRef.current ? Math.round((Date.now() - startRef.current) / 1000) : 0 })
     // Sync to groups with 0 score (fire and forget)
     api.post('/groups/daily-sync', {
       score: 0,

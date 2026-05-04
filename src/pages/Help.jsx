@@ -5,7 +5,7 @@ const TOPICS = [
   { id: 'getting-started',  label: 'Getting Started',         emoji: '🚀' },
   { id: 'install',          label: 'Installing the App',      emoji: '📲' },
   { id: 'scan-a-tag',       label: 'Submit a Tag',            emoji: '📸' },
-  { id: 'beat-ai',          label: 'Can You Beat AI?',        emoji: '🏆' },
+  { id: 'beat-ai',          label: 'Can You Beat The Wizard?',        emoji: '🏆' },
   { id: 'tag-of-the-day',   label: 'Tag of the Day',          emoji: '🏷️' },
   { id: 'groups',           label: 'Groups',                  emoji: '👥' },
   { id: 'family-fun',       label: 'How to Play Family Fun',  emoji: '🏠' },
@@ -16,6 +16,7 @@ const TOPICS = [
   { id: 'sharing',          label: 'Sharing & Bonus Points',  emoji: '📣' },
   { id: 'tips',             label: 'Tips for High Scores',    emoji: '💡' },
   { id: 'safety',          label: 'Safety & Driving',        emoji: '🚗' },
+  { id: 'about',           label: 'About Tag Wizard',        emoji: '🧙' },
 ]
 
 export default function Help() {
@@ -25,7 +26,7 @@ export default function Help() {
       <div className="pt-2"><BackButton to="/" /></div>
       <div className="pt-1">
         <h1 className="text-2xl font-black text-white">How to Play</h1>
-        <p className="text-slate-500 text-sm">Everything you need to know about iWonde Tag</p>
+        <p className="text-slate-500 text-sm">Everything you need to know about Tag Wizard</p>
       </div>
 
       {/* Table of Contents */}
@@ -46,7 +47,7 @@ export default function Help() {
 
       {/* ── Getting Started ───────────────────────────────── */}
       <Section id="getting-started" title="Getting Started" emoji="🚀">
-        <P>iWonde Tag is a vanity license plate spotting and decoding game. Spot plates on the road, decode their hidden meanings, earn points, and climb the leaderboard.</P>
+        <P>Tag Wizard is a vanity license plate spotting and decoding game. Spot plates on the road, decode their hidden meanings, earn points, and climb the leaderboard.</P>
         <P>You can play as a guest without an account — your points and streak are saved locally on your device. Create a free account to save progress across devices and appear on the global leaderboard.</P>
         <Step n={1} text='Tap the person icon in the top-right corner of any screen.' />
         <Step n={2} text='Tap "Create Account," enter a username and email address, then tap Create Account.' />
@@ -55,7 +56,7 @@ export default function Help() {
 
       {/* ── Installing the App ───────────────────────────── */}
       <Section id="install" title="Installing the App" emoji="📲">
-        <P>iWonde Tag is a Progressive Web App (PWA) — it installs directly from your browser and works like a native app on your home screen. No App Store required.</P>
+        <P>Tag Wizard is a Progressive Web App (PWA) — it installs directly from your browser and works like a native app on your home screen. No App Store required.</P>
 
         <div className="rounded-xl bg-navy-800 border border-navy-600 p-4 space-y-3 mt-2">
           <div className="flex items-center gap-2 mb-1">
@@ -66,7 +67,7 @@ export default function Help() {
           <Step n={2} text='Tap the Share button at the bottom of the screen — the square with an arrow pointing up.' />
           <Step n={3} text='Scroll down and tap "Add to Home Screen."' />
           <Step n={4} text='Tap "Add" in the top-right corner.' />
-          <Step n={5} text='The iWonde Tag icon now appears on your home screen like any other app.' />
+          <Step n={5} text='The Tag Wizard icon now appears on your home screen like any other app.' />
         </div>
 
         <div className="rounded-xl bg-navy-800 border border-navy-600 p-4 space-y-3">
@@ -78,30 +79,30 @@ export default function Help() {
           <Step n={2} text='Tap the three-dot menu (⋮) in the top-right corner.' />
           <Step n={3} text='Tap "Add to Home Screen" or "Install App."' />
           <Step n={4} text='Tap "Add" to confirm.' />
-          <Step n={5} text='The iWonde Tag icon now appears on your home screen.' />
+          <Step n={5} text='The Tag Wizard icon now appears on your home screen.' />
         </div>
 
-        <P>Once installed, iWonde Tag opens full-screen without a browser bar, just like a native app. You can update it by simply visiting the site again — updates happen automatically.</P>
-        <P>iWonde Tag is not currently available in the Apple App Store or Google Play Store — the web version is the real app!</P>
+        <P>Once installed, Tag Wizard opens full-screen without a browser bar, just like a native app. You can update it by simply visiting the site again — updates happen automatically.</P>
+        <P>Tag Wizard is not currently available in the Apple App Store or Google Play Store — the web version is the real app!</P>
       </Section>
 
       {/* ── Submit a Tag ─────────────────────────────────── */}
       <Section id="scan-a-tag" title="Submit a Tag" emoji="📸">
-        <P>The main way to earn points. When you spot a vanity plate on the road, submit it and let the AI decode it.</P>
+        <P>The main way to earn points. When you spot a vanity plate on the road, submit it and let The Wizard decode it.</P>
         <Step n={1} text='Tap "Submit a Plate" from the home screen.' />
         <Step n={2} text="Take a photo or upload one from your camera roll. The AI will automatically read the plate text using OCR." />
         <Step n={3} text="If OCR misreads the plate, type the correct text in the plate text box." />
-        <Step n={4} text="Select the state the plate is from — this helps the AI interpret regional references." />
-        <Step n={5} text='Tap "Decode This Tag." The AI interprets the plate and assigns it a rarity tier and point value.' />
+        <Step n={4} text="Select the state the plate is from — this helps The Wizard interpret regional references." />
+        <Step n={5} text='Tap "Decode This Tag." The Wizard interprets the plate and assigns it a rarity tier and point value.' />
         <Callout>Each new state you spot for the first time earns a bonus 100 points added to your State Collection.</Callout>
       </Section>
 
       {/* ── Can You Beat AI ──────────────────────────────── */}
-      <Section id="beat-ai" title="Can You Beat AI?" emoji="🏆">
-        <P>After the AI decodes a plate, you get a chance to challenge it with your own interpretation.</P>
-        <Step n={1} text="Read the AI's interpretation shown on screen." />
-        <Step n={2} text='Type your own meaning in the "Can You Beat AI?" box below the result.' />
-        <Step n={3} text='Tap "Submit My Interpretation." An AI judge compares your answer to the official decoding.' />
+      <Section id="beat-ai" title="Can You Beat The Wizard?" emoji="🏆">
+        <P>After The Wizard decodes a plate, you get a chance to challenge it with your own interpretation.</P>
+        <Step n={1} text="Read The Wizard's interpretation shown on screen." />
+        <Step n={2} text='Type your own meaning in the "Can You Beat The Wizard?" box below the result.' />
+        <Step n={3} text='Tap "Submit My Interpretation." The Wizard compares your answer to the official decoding.' />
         <P>Verdicts and bonus points:</P>
         <div className="space-y-1.5 mt-1">
           <VerdictRow verdict="Agree" color="text-emerald-400" pts="+75 pts" desc="Your reading is clearly correct — full bonus." />
@@ -133,18 +134,18 @@ export default function Help() {
         <SubHead>Inside a Group</SubHead>
         <Step n={1} text='Tap "Post a Plate" to submit a vanity plate as a challenge to your group.' />
         <Step n={2} text="Group members type their guesses during the blind window — nobody can see each other's answers yet." />
-        <Step n={3} text="After the reveal window closes, everyone sees the AI's official answer and the full score breakdown." />
+        <Step n={3} text="After the reveal window closes, everyone sees The Wizard's official answer and the full score breakdown." />
         <P>Points are awarded based on accuracy and speed. Faster correct answers score higher.</P>
       </Section>
 
       {/* ── Family Fun ───────────────────────────────────── */}
       <Section id="family-fun" title="How to Play Family Fun" emoji="🏠">
-        <P>Family Fun is a great way to play iWonde Tag on a road trip or during a car ride together. Here's how to set it up:</P>
+        <P>Family Fun is a great way to play Tag Wizard on a road trip or during a car ride together. Here's how to set it up:</P>
         <Step n={1} text='One person creates a group and names it anything you like — "Family Fun," "Road Trip," etc.' />
         <Step n={2} text="Share the 6-character code so everyone in the car can join." />
         <Step n={3} text="When someone spots a vanity plate, the spotter posts it as a challenge — type in the plate text and state." />
         <Step n={4} text="Everyone else in the car types their guess before the reveal." />
-        <Step n={5} text="After the window closes, the AI reveals the official answer and who got it right." />
+        <Step n={5} text="After the window closes, The Wizard reveals the official answer and who got it right." />
         <Callout>Tip: Take turns being the spotter so everyone gets a chance to post plates and rack up points.</Callout>
         <P>You can also play asynchronously — post plates you spotted during the day and let family members guess when they have time.</P>
       </Section>
@@ -170,8 +171,8 @@ export default function Help() {
         <P>Additional bonuses on top of the base plate score:</P>
         <div className="space-y-1 mt-1">
           <BonusRow label="Photo submitted"     pts="+25 pts" />
-          <BonusRow label="Beat the AI (agree)" pts="+75 pts" />
-          <BonusRow label="Beat the AI (partial)" pts="+35 pts" />
+          <BonusRow label="Beat The Wizard (agree)" pts="+75 pts" />
+          <BonusRow label="Beat The Wizard (partial)" pts="+35 pts" />
           <BonusRow label="New state collected"  pts="+100 pts" />
           <BonusRow label="Daily challenge"      pts="+50 pts base" />
           <BonusRow label="Share the app"        pts="+50 pts (once per day)" />
@@ -200,7 +201,7 @@ export default function Help() {
 
       {/* ── Sharing ──────────────────────────────────────── */}
       <Section id="sharing" title="Sharing & Bonus Points" emoji="📣">
-        <P>Share iWonde Tag with friends and earn bonus points every time you do.</P>
+        <P>Share Tag Wizard with friends and earn bonus points every time you do.</P>
         <Step n={1} text='Tap "Share the App" on the home screen.' />
         <Step n={2} text="Choose how you want to share — text, social media, email, or copy the link." />
         <Step n={3} text="Earn 50 bonus points — once per day." />
@@ -210,7 +211,7 @@ export default function Help() {
       {/* ── Tips ─────────────────────────────────────────── */}
       <Section id="tips" title="Tips for High Scores" emoji="💡">
         <Step n={1} text="Decode the Tag of the Day every single day — streaks give you bonus multipliers." />
-        <Step n={2} text="Always try Can You Beat AI? after scanning — the bonus points add up fast." />
+        <Step n={2} text="Always try Can You Beat The Wizard? after scanning — the bonus points add up fast." />
         <Step n={3} text="Target plates from states you haven't collected yet for the new-state bonus." />
         <Step n={4} text="Legendary plates are rare but worth 5× a Common plate. Learn the patterns: Latin phrases, pop culture codes, mirror tricks." />
         <Step n={5} text="Keep a group active — group challenges are a fast way to earn points on the go." />
@@ -224,10 +225,10 @@ export default function Help() {
         </h2>
         <div className="bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-3">
           <p className="text-red-200 text-sm font-bold leading-relaxed">
-            Never use iWonde Tag while operating a vehicle.
+            Never use Tag Wizard while operating a vehicle.
           </p>
           <p className="text-red-300/80 text-sm leading-relaxed mt-1">
-            iWonde Tag is designed to be used by <strong>passengers</strong>, or by drivers
+            Tag Wizard is designed to be used by <strong>passengers</strong>, or by drivers
             who have safely pulled over and parked. Submitting plates, guessing, or
             browsing the app while driving is dangerous and illegal in many states.
           </p>
@@ -239,7 +240,7 @@ export default function Help() {
         <p className="text-red-300/60 text-xs leading-relaxed mt-1">
           iWonde, LLC is not responsible for any accidents, injuries, traffic violations,
           or other consequences resulting from distracted or unsafe use of this app.
-          By using iWonde Tag you agree to use it responsibly and in compliance with
+          By using Tag Wizard you agree to use it responsibly and in compliance with
           all applicable traffic laws.
         </p>
       </div>
@@ -257,7 +258,14 @@ export default function Help() {
         </Link>
       </div>
 
-      <p className="text-center text-slate-600 text-xs pb-4">iWonde Tag · Decode. Collect. Compete.</p>
+      {/* ── About ─────────────────────────────────────────── */}
+      <Section id="about" title="About Tag Wizard" emoji="🧙">
+        <P>Tag Wizard is powered by AI. The Wizard's interpretations are generated by an artificial intelligence model and represent the app's best read of each plate — not a guaranteed or official meaning.</P>
+        <P>Vanity license plates are intentionally ambiguous — that's what makes them fun. There is no official database of plate meanings, so The Wizard uses context clues like the state, vehicle type, and letter/number patterns to make its best call. Reasonable people (and wizards) can disagree.</P>
+        <P>Tag Wizard is made by iWonde, LLC. Questions or feedback? Use the button below.</P>
+      </Section>
+
+      <p className="text-center text-slate-600 text-xs pb-4">Tag Wizard · Decode. Collect. Compete.</p>
     </div>
   )
 }

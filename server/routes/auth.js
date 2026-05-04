@@ -12,11 +12,26 @@ router.post('/register', async (req, res, next) => {
       return res.status(400).json({ error: 'Username and email are required' })
     }
 
+    // Username: 2–30 chars, letters/numbers/underscores/hyphens only
+    const cleanUsername = username.trim()
+    if (cleanUsername.length < 2 || cleanUsername.length > 30) {
+      return res.status(400).json({ error: 'Username must be 2–30 characters' })
+    }
+    if (!/^[a-zA-Z0-9_\- ]+$/.test(cleanUsername)) {
+      return res.status(400).json({ error: 'Username may only contain letters, numbers, spaces, hyphens, and underscores' })
+    }
+
+    // Email: basic format check
+    const cleanEmail = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' })
+    }
+
     // Check if username already taken
     const { data: existing } = await supabase
       .from('users')
       .select('id')
-      .ilike('display_name', username.trim())
+      .ilike('display_name', cleanUsername)
       .limit(1)
 
     if (existing?.length) {
@@ -26,9 +41,9 @@ router.post('/register', async (req, res, next) => {
     // Create Supabase Auth user with random password (not used for login)
     const password = crypto.randomUUID()
     const { data, error } = await supabase.auth.admin.createUser({
-      email: email.trim(),
+      email: cleanEmail,
       password,
-      user_metadata: { display_name: username.trim() },
+      user_metadata: { display_name: cleanUsername },
       email_confirm: true,
     })
     if (error) return res.status(400).json({ error: error.message })
@@ -36,12 +51,12 @@ router.post('/register', async (req, res, next) => {
     // Insert into public.users
     const { error: insertError } = await supabase.from('users').insert({
       id: data.user.id,
-      display_name: username.trim(),
+      display_name: cleanUsername,
     })
     if (insertError) console.warn('[register] users insert:', insertError.message)
 
-    const token = signToken({ id: data.user.id, email: email.trim(), name: username.trim() })
-    res.json({ token, user: { id: data.user.id, email: email.trim(), name: username.trim() } })
+    const token = signToken({ id: data.user.id, email: cleanEmail, name: cleanUsername })
+    res.json({ token, user: { id: data.user.id, email: cleanEmail, name: cleanUsername } })
   } catch (err) {
     next(err)
   }

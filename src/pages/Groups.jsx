@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
 import BackButton from '../components/BackButton'
+import { track } from '../lib/analytics'
 
 const DEMO_GROUPS = [
   { id: '1', name: 'Road Trip Squad', memberCount: 4, activeChallenges: 2, code: 'TRIP42', mode: 'plates' },
@@ -42,6 +43,7 @@ export default function Groups() {
       setShowCreate(false)
       setGroupName('')
       setMode('plates')
+      track('group_created', { mode })
     } catch {
       const mock = {
         id: Date.now().toString(), name: groupName.trim(), memberCount: 1,
@@ -63,6 +65,7 @@ export default function Groups() {
       setGroups(g => [data, ...g])
       setShowJoin(false)
       setJoinCode('')
+      track('group_joined', { mode: data.mode })
     } catch {
       setJoinCode('')
       setShowJoin(false)

@@ -41,9 +41,9 @@ export default function Home() {
   const [shareMsg, setShareMsg] = useState('')
 
   async function handleShare() {
-    const subject = 'Check out iWonde Tag!'
+    const subject = 'Check out Tag Wizard!'
     const body = [
-      'Join me on iWonde Tag — spot vanity license plates, decode their hidden meanings, collect all 50 states, and compete with friends! 🏷️',
+      'Join me on Tag Wizard — spot vanity license plates, decode their hidden meanings, collect all 50 states, and compete with friends! 🏷️',
       '',
       'To install the free app on your phone:',
       '• iPhone: open tag.iwonde.com in Safari → tap the Share icon (box with arrow) → "Add to Home Screen"',
@@ -55,7 +55,7 @@ export default function Home() {
     try {
       if (navigator.share) {
         // Mobile: use native share sheet
-        await navigator.share({ title: 'iWonde Tag', text: body, url: 'https://tag.iwonde.com' })
+        await navigator.share({ title: 'Tag Wizard', text: body, url: 'https://tag.iwonde.com' })
       } else {
         // Desktop: open email client with subject + full message pre-filled and editable
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
@@ -76,7 +76,7 @@ export default function Home() {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard icon="⭐" value={points.toLocaleString()} label="Points" />
-        <StatCard icon="🔥" value={`${streak}d`}           label="Streak" />
+        <StatCard icon="🔥" value={streak > 0 ? `${streak}d` : '—'} label="Streak" />
         <StatCard icon="🗺️" value={`${statesCollected.length}/51`} label="States" />
       </div>
 

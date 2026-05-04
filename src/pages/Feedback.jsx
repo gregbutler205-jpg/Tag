@@ -43,7 +43,7 @@ export default function Feedback() {
           <div className="text-5xl">🙏</div>
           <h2 className="text-xl font-black text-white">Thanks for your feedback!</h2>
           <p className="text-slate-400 text-sm leading-relaxed">
-            We read every message and use it to make iWonde Tag better.
+            We read every message and use it to make Tag Wizard better.
             {contact ? ' We\'ll be in touch if we have questions.' : ''}
           </p>
           <button
@@ -63,7 +63,7 @@ export default function Feedback() {
 
       <div className="pt-1">
         <h1 className="text-2xl font-black text-white">Send Feedback</h1>
-        <p className="text-slate-500 text-sm">Help us improve iWonde Tag</p>
+        <p className="text-slate-500 text-sm">Help us improve Tag Wizard</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

@@ -4,6 +4,8 @@ import PlateCard from '../components/PlateCard'
 import { STATES, STATE_NAMES } from '../lib/rarityConfig'
 import api from '../lib/api'
 import useStore from '../store/useStore'
+import { track } from '../lib/analytics'
+import { getEasterEggPhrase } from '../lib/wizardPhrases'
 
 // ── State chip picker (same pattern as Submit.jsx) ────────────────────────────
 function StateChipPicker({ value, onChange }) {
@@ -146,7 +148,8 @@ export default function GroupRoom() {
   const [groupStates, setGroupStates] = useState({ myStates: [], leaderboard: [] })
 
   // Daily tab
-  const [dailyBoard, setDailyBoard] = useState([])
+  const [dailyBoard, setDailyBoard]         = useState([])
+  const [victoryPhrase, setVictoryPhrase]   = useState(null)
 
   // ── Load group data ──────────────────────────────────────────────────────────
   const loadGroup = () =>
@@ -171,7 +174,15 @@ export default function GroupRoom() {
     api.get(`/groups/${id}/states`).then(({ data }) => setGroupStates(data)).catch(() => {})
 
   const loadDailyBoard = () =>
-    api.get(`/groups/${id}/daily-leaderboard`).then(({ data }) => setDailyBoard(data)).catch(() => {})
+    api.get(`/groups/${id}/daily-leaderboard`).then(({ data }) => {
+      setDailyBoard(data)
+      // Victory Easter egg — fires when the current user is #1 on the daily board
+      if (data?.length >= 2 && data[0]?.isYou) {
+        const phrase = getEasterEggPhrase('victory')
+        setVictoryPhrase(phrase)
+        track('wizard_easter_egg_shown', { trigger_type: 'victory', phrase_category: 'victory' })
+      }
+    }).catch(() => {})
 
   useEffect(() => {
     loadGroup()
@@ -183,11 +194,11 @@ export default function GroupRoom() {
 
   // ── Share / invite ───────────────────────────────────────────────────────────
   const handleShare = async () => {
-    const subject = `Join my group "${group.name}" on iWonde Tag!`
+    const subject = `Join my group "${group.name}" on Tag Wizard!`
     const body = [
-      `Join my group "${group.name}" on iWonde Tag! 🏷️`,
+      `Join my group "${group.name}" on Tag Wizard! 🏷️`,
       ``,
-      `iWonde Tag is a free game where you spot vanity license plates, decode their hidden meanings, collect all 50 states, and compete with friends!`,
+      `Tag Wizard is a free game where you spot vanity license plates, decode their hidden meanings, collect all 50 states, and compete with friends!`,
       ``,
       `To install the free app on your phone:`,
       `• iPhone: open tag.iwonde.com in Safari → tap the Share icon (box with arrow) → "Add to Home Screen"`,
@@ -256,6 +267,7 @@ export default function GroupRoom() {
     try {
       await api.post(`/groups/${id}/states`, { state: abbr })
       loadGroupStates()
+      track('group_state_logged', { state: abbr, group_mode: group?.mode })
     } catch {
       // silently fail
     }
@@ -703,6 +715,14 @@ export default function GroupRoom() {
             >
               Go to Daily Challenge →
             </button>
+          )}
+
+          {/* Victory Easter Egg banner */}
+          {victoryPhrase && (
+            <div className="flex items-center gap-3 bg-yellow-900/20 border border-yellow-600/40 rounded-2xl px-4 py-3">
+              <span className="text-2xl">🧙</span>
+              <p className="text-yellow-300 text-sm font-semibold italic">{victoryPhrase}</p>
+            </div>
           )}
 
           {/* Leaderboard */}

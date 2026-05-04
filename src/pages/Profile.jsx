@@ -223,7 +223,7 @@ export default function Profile() {
       <div className="grid grid-cols-2 gap-3">
         {[
           { label: 'Total Points',    value: points.toLocaleString(), icon: '⭐', color: 'text-yellow-400' },
-          { label: 'Current Streak',  value: `${streak} days`,        icon: '🔥', color: 'text-orange-400' },
+          { label: 'Current Streak',  value: streak > 0 ? `${streak} days` : '—', icon: '🔥', color: 'text-orange-400' },
           { label: 'States Collected',value: `${statesCollected.length} / 51`, icon: '🗺️', color: 'text-blue-400' },
           { label: 'Rank',            value: rank.label,              icon: rank.icon, color: rank.color },
         ].map(({ label, value, icon, color }) => (

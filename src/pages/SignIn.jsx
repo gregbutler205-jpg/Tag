@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import useStore from '../store/useStore'
 import api from '../lib/api'
+import { track } from '../lib/analytics'
 
 export default function SignIn() {
   const [mode, setMode]       = useState('signin')   // 'signin' | 'register'
@@ -26,6 +27,7 @@ export default function SignIn() {
         setPoints(me.points)
         setStatesCollected(me.statesCollected)
       }).catch(() => {})
+      track('sign_in')
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.error || 'Username not found. Check spelling or create an account.')
@@ -42,6 +44,7 @@ export default function SignIn() {
       // New accounts start at 0 — no sync needed, but keep pattern consistent
       setPoints(0)
       setStatesCollected([])
+      track('sign_up')
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.error || 'Could not create account. Try a different username.')
@@ -57,7 +60,7 @@ export default function SignIn() {
       style={{ background: '#04080f' }}>
 
       {/* Logo */}
-      <img src="/logo-dark-navy.png" alt="iWonde Tag" className="h-28 mb-8 object-contain"
+      <img src="/logo-dark-navy.png" alt="Tag Wizard" className="h-28 mb-8 object-contain"
         onError={e => e.target.style.display = 'none'} />
 
       {/* Card */}

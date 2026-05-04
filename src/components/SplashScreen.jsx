@@ -54,7 +54,7 @@ export default function SplashScreen({ onComplete }) {
         {!imgError ? (
           <img
             src="/logo-splash.png"
-            alt="iWonde Tag"
+            alt="Tag Wizard"
             style={{ maxHeight: '220px', maxWidth: '85vw', width: 'auto', height: 'auto', display: 'block' }}
             onError={() => setImgError(true)}
           />
@@ -63,10 +63,10 @@ export default function SplashScreen({ onComplete }) {
           <div className="text-center px-8">
             <div className="text-6xl mb-3">🏷️</div>
             <div className="flex items-baseline gap-2 justify-center select-none">
-              <span className="text-white font-extrabold text-4xl tracking-tight">iWonde</span>
+              <span className="text-white font-extrabold text-4xl tracking-tight">Tag</span>
               <span className="font-black text-5xl tracking-widest"
                 style={{ color: '#f59e0b', textShadow: '0 0 24px rgba(245,158,11,0.6)' }}>
-                TAG
+                WIZARD
               </span>
             </div>
           </div>

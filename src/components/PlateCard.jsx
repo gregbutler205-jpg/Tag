@@ -1,6 +1,6 @@
 import RarityBadge from './RarityBadge'
 
-export default function PlateCard({ plate, state, result, children, animate = false }) {
+export default function PlateCard({ plate, state, result, children, animate = false, easterEggPhrase = null }) {
   return (
     <div className={`glass-card rounded-2xl p-5 space-y-4 ${animate ? 'animate-fade-up' : ''}`}>
 
@@ -42,14 +42,16 @@ export default function PlateCard({ plate, state, result, children, animate = fa
 
           {/* Primary interpretation */}
           <div className="bg-navy-800 rounded-xl p-3 border border-navy-600">
-            <div className="text-xs text-slate-500 mb-1 uppercase tracking-wide">Best Interpretation</div>
+            <div className="text-xs text-slate-500 mb-1 uppercase tracking-wide">
+              {easterEggPhrase || "🧙 The Wizard's Take"}
+            </div>
             <p className="text-white font-semibold text-base">{result.primary}</p>
           </div>
 
           {/* Alternatives */}
           {result.alternatives?.length > 0 && (
             <div className="space-y-1.5">
-              <div className="text-xs text-slate-500 uppercase tracking-wide">Also Possible</div>
+              <div className="text-xs text-slate-500 uppercase tracking-wide">Alternate Spells</div>
               {result.alternatives.map((alt, i) => (
                 <div key={i} className="flex items-start gap-2 text-slate-400 text-sm">
                   <span className="text-navy-500 mt-0.5">◆</span>

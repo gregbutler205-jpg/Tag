@@ -7,8 +7,11 @@ import useStore from '../store/useStore'
 import api from '../lib/api'
 import BackButton from '../components/BackButton'
 import SafetyBanner from '../components/SafetyBanner'
+import { track } from '../lib/analytics'
+import { getEasterEggPhrase, EASTER_EGG_PROBABILITY } from '../lib/wizardPhrases'
 
 const MODES = { camera: 'camera', manual: 'manual' }
+const TODAY_KEY = () => `iwt_first_decode_${new Date().toDateString()}`
 
 /* ── State chip-grid picker ─────────────────────────────────────── */
 function StateChipPicker({ value, onChange }) {
@@ -137,7 +140,9 @@ export default function Submit() {
   const [stateAutoFilled, setStateAutoFilled] = useState(false)  // true when state came from OCR
   const fileInputRef  = useRef(null)
   const plateInputRef = useRef(null)
-  const [stateAdded, setStateAdded] = useState(false)
+  const [stateAdded, setStateAdded]         = useState(false)
+  const [easterEggPhrase, setEasterEggPhrase] = useState(null)
+  const [sessionDecodes, setSessionDecodes]   = useState(0)
   const { addPoints, addState, statesCollected } = useStore()
 
   const logStateOnly = () => {
@@ -146,6 +151,7 @@ export default function Submit() {
     if (isNew) addPoints(100)
     setStateAdded(true)
     setTimeout(() => setStateAdded(false), 3000)
+    track('state_logged', { state, is_new: isNew, source: 'manual' })
   }
 
   /* ── OCR — called with a pre-cropped Blob from PlateCropper ── */
@@ -178,6 +184,7 @@ export default function Submit() {
       }
 
       if (data.meta) setCropMeta(data.meta)
+      track('plate_ocr', { success: !!data.text, method: data.meta?.method || 'unknown', state_detected: !!data.detectedState })
     } catch {
       setOcrFailed(true)
     } finally {
@@ -231,6 +238,48 @@ export default function Submit() {
       setResult(data)
       addPoints(data.points || 50)
       if (state) addState(state)
+      track('plate_interpreted', {
+        plate_text:  plateText.trim().toUpperCase(),
+        state:       state || 'unknown',
+        has_photo:   !!photoData,
+        rarity:      data.rarity,
+        points:      data.points,
+        confidence:  Math.round((data.confidence || 0) * 100),
+      })
+
+      // ── Easter Egg trigger logic ────────────────────────────────────────────
+      const newDecodeCount = sessionDecodes + 1
+      setSessionDecodes(newDecodeCount)
+      const confidencePct = Math.round((data.confidence || 0) * 100)
+      const isFirstToday  = !sessionStorage.getItem(TODAY_KEY())
+      if (isFirstToday) sessionStorage.setItem(TODAY_KEY(), '1')
+
+      let eggPhrase = null
+      let eggTrigger = null
+
+      if (confidencePct < 50) {
+        // Low confidence — always show Uncertain pool
+        eggPhrase  = getEasterEggPhrase('uncertain')
+        eggTrigger = 'uncertain'
+      } else if (isFirstToday) {
+        eggPhrase  = getEasterEggPhrase('welcome')
+        eggTrigger = 'welcome'
+      } else if (data.rarity === 'legendary') {
+        eggPhrase  = getEasterEggPhrase('legendary')
+        eggTrigger = 'legendary'
+      } else if (newDecodeCount >= 5 && newDecodeCount % 5 === 0) {
+        // Every 5th decode in the session
+        eggPhrase  = getEasterEggPhrase('streak')
+        eggTrigger = 'streak'
+      } else if (Math.random() < EASTER_EGG_PROBABILITY) {
+        eggPhrase  = getEasterEggPhrase('general')
+        eggTrigger = 'general'
+      }
+
+      setEasterEggPhrase(eggPhrase)
+      if (eggPhrase) {
+        track('wizard_easter_egg_shown', { trigger_type: eggTrigger, phrase_category: eggTrigger })
+      }
     } catch (e) {
       setError(e.response?.data?.error || 'Interpretation failed — check your API key or try again.')
     } finally {
@@ -251,6 +300,7 @@ export default function Submit() {
       })
       setChallenge(data)
       if (data.bonusPoints > 0) addPoints(data.bonusPoints)
+      track('challenge_submitted', { verdict: data.verdict, bonus_points: data.bonusPoints })
     } catch {
       setChallenge({ verdict: 'disagree', reasoning: 'Could not reach the judge — try again.', bonusPoints: 0 })
     } finally {
@@ -264,7 +314,7 @@ export default function Submit() {
     setPhotoData(null); setCropSrc(null); setError(null)
     setOcrFailed(false); setCropMeta(null)
     setUserMeaning(''); setChallenge(null)
-    setStateAutoFilled(false)
+    setStateAutoFilled(false); setEasterEggPhrase(null)
   }
 
   return (
@@ -496,7 +546,7 @@ export default function Submit() {
       {/* ── Result + Challenge ── */}
       {result && (
         <div className="space-y-4 animate-fade-up">
-          <PlateCard plate={plateText} state={state || undefined} result={result} animate />
+          <PlateCard plate={plateText} state={state || undefined} result={result} animate easterEggPhrase={easterEggPhrase} />
 
           {/* Challenge verdict banner */}
           {challenge && (
@@ -534,7 +584,7 @@ export default function Submit() {
           {!challenge && (
             <div className="glass-card rounded-2xl p-4 space-y-3">
               <p className="text-slate-400 text-sm font-semibold">
-                🏆 Can You Beat AI? Type your interpretation:
+                🧙 Can You Beat The Wizard? Cast your spell:
               </p>
               <input
                 value={userMeaning}

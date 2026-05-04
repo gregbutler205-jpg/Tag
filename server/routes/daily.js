@@ -110,6 +110,21 @@ router.post('/:id/submit', optionalAuth, async (req, res, next) => {
     let plateText = null
     let aiResult = null
 
+    // ── Dedup: authenticated users may only submit once per day ──────────────
+    if (req.user?.id) {
+      const { data: alreadySubmitted } = await supabase
+        .from('daily_submissions')
+        .select('id')
+        .eq('user_id', req.user.id)
+        .like('challenge_id', `%-${today}-%`)
+        .limit(1)
+        .maybeSingle()
+
+      if (alreadySubmitted) {
+        return res.status(409).json({ error: "You've already submitted today's challenge — come back tomorrow!" })
+      }
+    }
+
     if (id.startsWith('pool-')) {
       // Extract the pool plate UUID from the id string: pool-<date>-<uuid>
       // The UUID is everything after the second hyphen-separated token (date has dashes too)
@@ -213,8 +228,8 @@ router.post('/:id/submit', optionalAuth, async (req, res, next) => {
       feedback = 'Interesting interpretation!'
     }
 
-    // Save submission if authenticated and this is a real daily_challenges record
-    if (req.user?.id && !id.startsWith('pool-') && !id.startsWith('fallback-')) {
+    // Save submission for all authenticated users (enables dedup + history)
+    if (req.user?.id && !id.startsWith('fallback-')) {
       const { error: subErr } = await supabase.from('daily_submissions').insert({
         challenge_id: id,
         user_id: req.user.id,
