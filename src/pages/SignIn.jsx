@@ -60,7 +60,7 @@ export default function SignIn() {
       style={{ background: '#04080f' }}>
 
       {/* Logo */}
-      <img src="/logo-dark-navy.png" alt="Tag Wizard" className="h-28 mb-8 object-contain"
+      <img src="/logo.png" alt="Tag Wizard" className="h-28 mb-8 object-contain"
         onError={e => e.target.style.display = 'none'} />
 
       {/* Card */}
