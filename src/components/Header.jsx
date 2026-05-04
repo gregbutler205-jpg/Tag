@@ -36,9 +36,9 @@ export default function Header({ logoVisible = true }) {
               alt="Tag Wizard"
               data-splash-target
               style={{
-                height: '297px',
+                height: '64px',
                 width: 'auto',
-                maxWidth: '630px',
+                maxWidth: '240px',
                 display: 'block',
                 opacity: logoVisible ? 1 : 0,
                 transition: logoVisible ? 'opacity 0.4s ease' : 'none',
