@@ -15,7 +15,7 @@ export default function Header({ logoVisible = true }) {
         boxShadow: '0 2px 20px rgba(245,158,11,0.15)',
       }}
     >
-      <div className="max-w-lg mx-auto flex items-center justify-between" style={{ minHeight: '310px' }}>
+      <div className="max-w-lg mx-auto flex items-center justify-between" style={{ minHeight: '260px' }}>
 
         {/* Left — Help button */}
         <Link to="/help"
