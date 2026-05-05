@@ -8,6 +8,7 @@ export default defineConfig({
       '/plates':      'http://localhost:3001',
       '/daily':       'http://localhost:3001',
       '/groups':      'http://localhost:3001',
+      '/road-trip':   'http://localhost:3001',
       '/leaderboard': 'http://localhost:3001',
       '/auth':        'http://localhost:3001',
       '/admin':       'http://localhost:3001',

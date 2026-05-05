@@ -39,7 +39,7 @@ export default function Daily() {
     api.get('/daily')
       .then(({ data }) => {
         setDaily(data)
-        if (alreadyDone && data.result) { setResult(data.result); setSubmitted(true) }
+        if (alreadyDone) setSubmitted(true)
       })
       .catch(() => setDaily({ plate: 'GR8FUL', id: 'demo' }))
       .finally(() => setLoading(false))
@@ -78,7 +78,15 @@ export default function Daily() {
         date: new Date().toDateString(),
         guess: guess.trim(),
       }).catch(() => {})
-    } catch {
+    } catch (err) {
+      // Server rejected as duplicate — don't award points again
+      if (err.response?.status === 409) {
+        markDailyDone()
+        setSubmitted(true)
+        setResult({ primary: guess, points: 0, feedback: err.response.data?.error || "You've already submitted today — come back tomorrow!" })
+        return
+      }
+      // Offline / network error — award offline credit
       setResult({ primary: guess, points: 50, rarity: 'common', feedback: 'Answer recorded offline!' })
       setSubmitted(true)
       addPoints(50)

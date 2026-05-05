@@ -259,6 +259,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
       plateText:   c.plate_text,
       state:       c.state,
       submittedBy: c.submitted_by_name || 'Someone',
+      photoData:   c.photo_data || null,
       isOwn:       c.submitted_by === req.user.id,
       hasGuessed:  c.group_guesses?.some(g => g.user_id === req.user.id),
       guessCount:  c.group_guesses?.length || 0,
@@ -278,7 +279,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 // POST /groups/:id/plates — Submit plate to group
 router.post('/:id/plates', requireAuth, async (req, res, next) => {
   try {
-    const { text, state, windowHours = 12 } = req.body
+    const { text, state, windowHours = 12, photoData } = req.body
     if (!text?.trim()) return res.status(400).json({ error: 'Plate text required' })
 
     const plateUpper = text.toUpperCase().replace(/[^A-Z0-9 -]/g, '')
@@ -297,6 +298,7 @@ router.post('/:id/plates', requireAuth, async (req, res, next) => {
       closes_at:         closesAt,
       ai_result:         aiResult,
       revealed:          false,
+      photo_data:        photoData || null,
     }
 
     await supabase.from('group_challenges').insert(challenge)
@@ -306,6 +308,7 @@ router.post('/:id/plates', requireAuth, async (req, res, next) => {
       plateText:   plateUpper,
       state,
       submittedBy: challenge.submitted_by_name,
+      photoData:   photoData || null,
       isOwn:       true,
       hasGuessed:  false,
       guessCount:  0,

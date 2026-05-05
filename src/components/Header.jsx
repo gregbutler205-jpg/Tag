@@ -17,9 +17,9 @@ export default function Header({ logoVisible = true }) {
         paddingBottom: '5mm',
       }}
     >
-      {/* Fixed-height row — elements overflow above/below so header background stays compact */}
+      {/* Row height is driven by the logo via clamp — elements overflow above/below */}
       <div className="max-w-lg mx-auto flex items-center justify-between"
-        style={{ height: '128px', overflow: 'visible' }}>
+        style={{ overflow: 'visible' }}>
 
         {/* Left — Help button */}
         <Link to="/help"
@@ -38,9 +38,9 @@ export default function Header({ logoVisible = true }) {
               alt="Tag Wizard"
               data-splash-target
               style={{
-                height: '256px',
+                height: 'clamp(90px, 28vw, 256px)',
                 width: 'auto',
-                maxWidth: '640px',
+                maxWidth: '100%',
                 display: 'block',
                 opacity: logoVisible ? 1 : 0,
                 transition: logoVisible ? 'opacity 0.4s ease' : 'none',

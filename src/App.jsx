@@ -19,6 +19,7 @@ import Privacy from './pages/Privacy'
 import SignIn from './pages/SignIn'
 import Admin from './pages/Admin'
 import Feedback from './pages/Feedback'
+import RoadTripRoom from './pages/RoadTripRoom'
 
 function NotFound() {
   return (
@@ -72,7 +73,8 @@ export default function App() {
           <Route path="/submit"     element={<Submit />} />
           <Route path="/daily"      element={<Daily />} />
           <Route path="/groups"     element={<Groups />} />
-          <Route path="/groups/:id" element={<GroupRoom />} />
+          <Route path="/groups/:id"    element={<GroupRoom />} />
+          <Route path="/road-trip/:id" element={<RoadTripRoom />} />
           <Route path="/collection" element={<Collection />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile"    element={<Profile />} />

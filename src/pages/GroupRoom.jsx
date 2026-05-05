@@ -1,11 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import PlateCard from '../components/PlateCard'
+import PlateCropper from '../components/PlateCropper'
 import { STATES, STATE_NAMES } from '../lib/rarityConfig'
 import api from '../lib/api'
 import useStore from '../store/useStore'
 import { track } from '../lib/analytics'
 import { getEasterEggPhrase } from '../lib/wizardPhrases'
+
+// Compress a photo DataURL to a small JPEG thumbnail for storage
+async function compressPhoto(dataUrl, maxWidth = 480) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width)
+      const canvas = document.createElement('canvas')
+      canvas.width  = Math.round(img.width  * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/jpeg', 0.65))
+    }
+    img.onerror = () => resolve(null)
+    img.src = dataUrl
+  })
+}
 
 // ── State chip picker (same pattern as Submit.jsx) ────────────────────────────
 function StateChipPicker({ value, onChange }) {
@@ -141,6 +159,14 @@ export default function GroupRoom() {
   const [revealData, setRevealData] = useState({})
   const [view, setView]             = useState('challenges')
 
+  // Photo submission state
+  const fileInputRef  = useRef(null)
+  const [cropSrc, setCropSrc]         = useState(null)
+  const [photoData, setPhotoData]     = useState(null)
+  const [ocrLoading, setOcrLoading]   = useState(false)
+  const [ocrFailed, setOcrFailed]     = useState(false)
+  const [postMode, setPostMode]       = useState('manual') // 'manual' | 'camera'
+
   // Members tab
   const [members, setMembers] = useState([])
 
@@ -222,14 +248,56 @@ export default function GroupRoom() {
     }
   }
 
+  // ── Photo OCR flow ───────────────────────────────────────────────────────────
+  const handleFilePick = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => { setCropSrc(ev.target.result); setPhotoData(null); setPlateText(''); setOcrFailed(false) }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const handleCropConfirm = (croppedBlob) => {
+    const reader = new FileReader()
+    reader.onload = async ev => {
+      const dataUrl = ev.target.result
+      setPhotoData(dataUrl)
+      setCropSrc(null)
+      setOcrLoading(true)
+      setOcrFailed(false)
+      try {
+        const form = new FormData()
+        form.append('photo', croppedBlob, 'plate.jpg')
+        form.append('skipCrop', 'true')
+        const { data } = await api.post('/plates/ocr', form)
+        if (data.text) setPlateText(data.text.toUpperCase())
+        else setOcrFailed(true)
+        if (data.detectedState && !state) setState(data.detectedState)
+      } catch { setOcrFailed(true) }
+      finally { setOcrLoading(false) }
+    }
+    reader.readAsDataURL(croppedBlob)
+  }
+
+  const handleCropCancel = () => { setCropSrc(null); setPhotoData(null); setPlateText('') }
+
   // ── Submit plate to group ────────────────────────────────────────────────────
   const submitPlate = async () => {
     if (!plateText.trim()) return
     setSubmitting(true)
     try {
-      const { data } = await api.post(`/groups/${id}/plates`, { text: plateText.toUpperCase(), state })
+      let compressed = null
+      if (photoData) compressed = await compressPhoto(photoData)
+      const { data } = await api.post(`/groups/${id}/plates`, {
+        text: plateText.toUpperCase(),
+        state,
+        photoData: compressed || undefined,
+      })
       setChallenges(c => [data, ...c])
-      setPlateText(''); setState(''); setView('challenges')
+      setPlateText(''); setState(''); setPhotoData(null); setCropSrc(null)
+      setOcrFailed(false); setPostMode('manual')
+      setView('challenges')
     } finally { setSubmitting(false) }
   }
 
@@ -360,6 +428,11 @@ export default function GroupRoom() {
 
               return (
                 <div key={c.id} className="glass-card rounded-2xl overflow-hidden">
+
+                  {/* Plate photo (if submitted from camera) */}
+                  {c.photoData && (
+                    <img src={c.photoData} alt="Submitted plate" className="w-full rounded-t-2xl object-cover max-h-48" />
+                  )}
 
                   {/* Plate display */}
                   <div className="p-4 space-y-3">
@@ -826,31 +899,96 @@ export default function GroupRoom() {
           POST TAB
       ══════════════════════════════════════════════════════ */}
       {currentView === 'post' && (
-        <div className="glass-card rounded-2xl p-4 space-y-4 animate-fade-up">
-          <div className="text-sm font-bold text-white">Post a Plate to the Group</div>
+        <div className="space-y-4 animate-fade-up">
 
-          <input
-            value={plateText}
-            onChange={e => setPlateText(e.target.value.toUpperCase().replace(/[^A-Z0-9 -]/g, ''))}
-            placeholder="GR8FUL"
-            maxLength={8}
-            className="plate w-full px-6 py-4 text-center text-3xl tracking-[0.3em] focus:outline-none focus:ring-4 focus:ring-brand-blue/40 placeholder:text-slate-400"
-          />
+          {/* Hidden file input */}
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFilePick} />
 
-          <StateChipPicker value={state} onChange={setState} />
+          {/* Crop UI */}
+          {cropSrc && (
+            <PlateCropper imageSrc={cropSrc} onConfirm={handleCropConfirm} onCancel={handleCropCancel} />
+          )}
 
-          <div className="bg-[#111820] border border-navy-700 rounded-xl px-4 py-3 space-y-1">
-            <p className="text-slate-400 text-xs leading-relaxed">
-              <span className="text-slate-300 font-semibold">How it works:</span>
-              {' '}After you post, group members have <span className="text-brand-yellow font-semibold">12 hours</span> to submit their interpretation.
-              Once the window closes, anyone can tap <span className="text-brand-yellow font-semibold">Reveal Results</span> to score all guesses.
-            </p>
-          </div>
+          {!cropSrc && (
+            <div className="glass-card rounded-2xl p-4 space-y-4">
+              <div className="text-sm font-bold text-white">Post a Plate to the Group</div>
 
-          <button onClick={submitPlate} disabled={!plateText.trim() || submitting}
-            className="w-full bg-brand-blue hover:brightness-110 disabled:opacity-40 text-white font-black py-4 rounded-2xl text-base transition-all active:scale-[0.98] shadow-glow">
-            {submitting ? '📡 Posting…' : '📤 Post to Group'}
-          </button>
+              {/* Mode toggle */}
+              <div className="flex glass-card rounded-xl p-1 gap-1">
+                {[{ key: 'camera', label: '📸 Camera / Upload' }, { key: 'manual', label: '⌨️ Manual' }].map(m => (
+                  <button key={m.key} onClick={() => { setPostMode(m.key); setPhotoData(null); setPlateText(''); setOcrFailed(false) }}
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                      postMode === m.key ? 'bg-brand-blue text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}>{m.label}</button>
+                ))}
+              </div>
+
+              {/* Camera flow */}
+              {postMode === 'camera' && !photoData && (
+                <button onClick={() => fileInputRef.current?.click()}
+                  className="w-full bg-navy-900 rounded-2xl border-2 border-dashed border-navy-600 hover:border-brand-blue transition-colors aspect-video flex flex-col items-center justify-center gap-3">
+                  <span className="text-4xl">📸</span>
+                  <div className="text-center">
+                    <p className="text-white font-bold">Take a Photo</p>
+                    <p className="text-slate-500 text-xs">Camera · Library · Files</p>
+                  </div>
+                </button>
+              )}
+
+              {/* Photo preview after OCR */}
+              {postMode === 'camera' && photoData && (
+                <div className="space-y-2">
+                  <div className="relative rounded-2xl overflow-hidden border border-navy-600">
+                    <img src={photoData} alt="Plate" className="w-full rounded-2xl" />
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <button onClick={() => fileInputRef.current?.click()}
+                        className="bg-navy-900/90 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-brand-blue transition-colors">New Photo</button>
+                      <button onClick={() => { setPhotoData(null); setPlateText('') }}
+                        className="bg-navy-900/90 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm hover:bg-red-900 transition-colors">✕</button>
+                    </div>
+                    {ocrLoading && (
+                      <div className="absolute inset-0 bg-navy-900/70 flex flex-col items-center justify-center gap-2 rounded-2xl">
+                        <div className="text-brand-yellow animate-pulse text-sm font-bold">Reading plate...</div>
+                        <div className="w-8 h-8 border-2 border-brand-yellow/30 border-t-brand-yellow rounded-full animate-spin" />
+                      </div>
+                    )}
+                    {!ocrLoading && plateText && (
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-emerald-900/90 border border-emerald-600 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                        ✓ Read: {plateText}
+                      </div>
+                    )}
+                  </div>
+                  {ocrFailed && (
+                    <p className="text-amber-400 text-xs text-center">⚠️ Couldn't auto-read — type the plate below</p>
+                  )}
+                </div>
+              )}
+
+              {/* Plate text input */}
+              <input
+                value={plateText}
+                onChange={e => setPlateText(e.target.value.toUpperCase().replace(/[^A-Z0-9 -]/g, ''))}
+                placeholder="GR8FUL"
+                maxLength={8}
+                className="plate w-full px-6 py-4 text-center text-3xl tracking-[0.3em] focus:outline-none focus:ring-4 focus:ring-brand-blue/40 placeholder:text-slate-400"
+              />
+
+              <StateChipPicker value={state} onChange={setState} />
+
+              <div className="bg-[#111820] border border-navy-700 rounded-xl px-4 py-3">
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  <span className="text-slate-300 font-semibold">How it works:</span>
+                  {' '}After you post, group members have <span className="text-brand-yellow font-semibold">12 hours</span> to submit their interpretation.
+                  Once the window closes, anyone can tap <span className="text-brand-yellow font-semibold">Reveal Results</span> to score all guesses.
+                </p>
+              </div>
+
+              <button onClick={submitPlate} disabled={!plateText.trim() || submitting}
+                className="w-full bg-brand-blue hover:brightness-110 disabled:opacity-40 text-white font-black py-4 rounded-2xl text-base transition-all active:scale-[0.98] shadow-glow">
+                {submitting ? '📡 Posting…' : '📤 Post to Group'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

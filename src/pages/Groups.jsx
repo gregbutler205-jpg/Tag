@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import BackButton from '../components/BackButton'
 import { track } from '../lib/analytics'
@@ -18,7 +18,21 @@ const MODE_OPTIONS = [
 
 const MODE_EMOJI = { plates: '🏷️', states: '🗺️', both: '🌟', daily: '📅' }
 
+const RT_TIMER_OPTIONS = [
+  { key: 30, label: 'Sprint',   desc: '30s' },
+  { key: 60, label: 'Standard', desc: '60s' },
+  { key: 90, label: 'Chill',    desc: '90s' },
+]
+
+const RT_MODE_OPTIONS = [
+  { key: 'decode',    emoji: '🏷️', label: 'Decode Only' },
+  { key: 'statehunt', emoji: '🗺️', label: 'State Hunt'  },
+  { key: 'combo',     emoji: '🌟', label: 'Combo'       },
+]
+
 export default function Groups() {
+  const navigate = useNavigate()
+
   const [groups, setGroups]         = useState([])
   const [loading, setLoading]       = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -27,6 +41,15 @@ export default function Groups() {
   const [joinCode, setJoinCode]     = useState('')
   const [busy, setBusy]             = useState(false)
   const [mode, setMode]             = useState('plates')
+
+  // Road Trip state
+  const [showRTCreate, setShowRTCreate] = useState(false)
+  const [showRTJoin, setShowRTJoin]     = useState(false)
+  const [rtName, setRtName]             = useState('')
+  const [rtTimer, setRtTimer]           = useState(60)
+  const [rtMode, setRtMode]             = useState('combo')
+  const [rtCode, setRtCode]             = useState('')
+  const [rtBusy, setRtBusy]             = useState(false)
 
   useEffect(() => {
     api.get('/groups').then(({ data }) => setGroups(data))
@@ -72,6 +95,36 @@ export default function Groups() {
     } finally { setBusy(false) }
   }
 
+  const startRoadTrip = async () => {
+    setRtBusy(true)
+    try {
+      const { data } = await api.post('/road-trip', {
+        name: rtName.trim() || 'Road Trip',
+        timerSeconds: rtTimer,
+        gameMode: rtMode,
+      })
+      track('road_trip_created', { gameMode: rtMode, timerSeconds: rtTimer })
+      navigate(`/road-trip/${data.id}`)
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not create trip — are you signed in?')
+      setRtBusy(false)
+    }
+  }
+
+  const joinRoadTrip = async () => {
+    const code = rtCode.trim()
+    if (code.length !== 4) return
+    setRtBusy(true)
+    try {
+      const { data } = await api.post('/road-trip/join', { code })
+      track('road_trip_joined')
+      navigate(`/road-trip/${data.id}`)
+    } catch (err) {
+      alert(err.response?.data?.error || 'Trip not found — check the code and try again')
+      setRtBusy(false)
+    }
+  }
+
   return (
     <div className="pb-nav px-4 pt-3 space-y-4 max-w-lg mx-auto">
 
@@ -79,9 +132,145 @@ export default function Groups() {
       <div className="pt-2"><BackButton to="/" /></div>
       <div className="pt-2 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white">Group Challenges</h1>
-          <p className="text-slate-500 text-sm">Compete blind with friends</p>
+          <h1 className="text-2xl font-black text-white">Groups</h1>
+          <p className="text-slate-500 text-sm">Challenges &amp; Road Trips</p>
         </div>
+      </div>
+
+      {/* ── ROAD TRIP SECTION ── */}
+      <div className="glass-card rounded-2xl p-4 space-y-3 border border-brand-blue/30">
+        <div className="flex items-center gap-2">
+          <div className="text-2xl">🚗</div>
+          <div>
+            <div className="text-white font-black">Road Trip Mode</div>
+            <div className="text-slate-500 text-xs">Real-time · Everyone in the same car</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => { setShowRTCreate(true); setShowRTJoin(false) }}
+            className="bg-brand-blue hover:bg-brand-blue-light text-white font-bold py-3 rounded-xl transition-all shadow-glow text-sm"
+          >
+            🚀 Start Trip
+          </button>
+          <button
+            onClick={() => { setShowRTJoin(true); setShowRTCreate(false) }}
+            className="glass-card hover:border-navy-500 text-white font-bold py-3 rounded-xl transition-all text-sm"
+          >
+            🔑 Join Trip
+          </button>
+        </div>
+
+        {/* Road Trip create form */}
+        {showRTCreate && (
+          <div className="space-y-3 animate-fade-up border-t border-navy-700 pt-3">
+            <div className="text-sm font-bold text-white">New Road Trip</div>
+
+            <input
+              value={rtName}
+              onChange={e => setRtName(e.target.value)}
+              placeholder="Trip name (optional)"
+              className="w-full bg-navy-800 border border-navy-600 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm"
+            />
+
+            {/* Timer speed */}
+            <div>
+              <div className="text-xs text-slate-500 mb-2">Round timer</div>
+              <div className="grid grid-cols-3 gap-2">
+                {RT_TIMER_OPTIONS.map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setRtTimer(opt.key)}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-0.5 ${
+                      rtTimer === opt.key
+                        ? 'bg-brand-blue text-white shadow-glow'
+                        : 'glass-card text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{opt.label}</span>
+                    <span className="opacity-60">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Game mode */}
+            <div>
+              <div className="text-xs text-slate-500 mb-2">Game mode</div>
+              <div className="grid grid-cols-3 gap-2">
+                {RT_MODE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setRtMode(opt.key)}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-0.5 ${
+                      rtMode === opt.key
+                        ? 'bg-brand-blue text-white shadow-glow'
+                        : 'glass-card text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{opt.emoji}</span>
+                    <span>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowRTCreate(false); setRtName(''); setRtTimer(60); setRtMode('combo') }}
+                className="flex-1 glass-card py-2 rounded-xl text-slate-400 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={startRoadTrip}
+                disabled={rtBusy}
+                className="flex-1 bg-brand-blue disabled:opacity-40 text-white font-bold py-2 rounded-xl text-sm transition-all"
+              >
+                {rtBusy ? 'Creating...' : '🚀 Start!'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Road Trip join form */}
+        {showRTJoin && (
+          <div className="space-y-3 animate-fade-up border-t border-navy-700 pt-3">
+            <div className="text-sm font-bold text-white">Join with 4-Digit Code</div>
+            <input
+              value={rtCode}
+              onChange={e => setRtCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="0000"
+              maxLength={4}
+              inputMode="numeric"
+              className="w-full bg-navy-800 border border-navy-600 rounded-xl px-4 py-4 text-white placeholder:text-slate-600 text-center tracking-[0.4em] font-black text-3xl focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              onKeyDown={e => e.key === 'Enter' && joinRoadTrip()}
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowRTJoin(false); setRtCode('') }}
+                className="flex-1 glass-card py-2 rounded-xl text-slate-400 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={joinRoadTrip}
+                disabled={rtCode.length !== 4 || rtBusy}
+                className="flex-1 bg-brand-blue disabled:opacity-40 text-white font-bold py-2 rounded-xl text-sm transition-all"
+              >
+                {rtBusy ? 'Joining...' : 'Join Trip'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── GROUP CHALLENGES SECTION ── */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-bold text-slate-400 uppercase tracking-wide">Group Challenges</div>
+        <div className="text-xs text-slate-600">Async · Play from anywhere</div>
       </div>
 
       {/* Actions */}
@@ -196,14 +385,14 @@ export default function Groups() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 space-y-3">
-          <div className="text-5xl">👥</div>
+        <div className="text-center py-10 space-y-2">
+          <div className="text-4xl">👥</div>
           <div className="text-white font-bold">No groups yet</div>
           <div className="text-slate-500 text-sm">Create a group or join one with a code</div>
         </div>
       )}
 
-      {/* How it works */}
+      {/* How it works — Group Challenges */}
       <div className="glass-card rounded-2xl p-4 space-y-2">
         <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">How Group Challenges Work</div>
         <div className="space-y-2 text-sm text-slate-400">
@@ -212,6 +401,18 @@ export default function Groups() {
           <div className="flex gap-2"><span className="text-brand-yellow shrink-0">3.</span>In States/Both: log the states you spot — collect the most to win!</div>
           <div className="flex gap-2"><span className="text-brand-yellow shrink-0">4.</span>In Daily: everyone does the daily challenge, fastest correct answer wins</div>
           <div className="flex gap-2"><span className="text-brand-yellow shrink-0">5.</span>Points awarded for creativity, accuracy, speed, and state collection</div>
+        </div>
+      </div>
+
+      {/* How it works — Road Trip */}
+      <div className="glass-card rounded-2xl p-4 space-y-2">
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">How Road Trip Works</div>
+        <div className="space-y-2 text-sm text-slate-400">
+          <div className="flex gap-2"><span className="text-brand-yellow shrink-0">1.</span>Start a trip and share the 4-digit code with everyone in the car</div>
+          <div className="flex gap-2"><span className="text-brand-yellow shrink-0">2.</span>Anyone can snap a vanity plate — a timer starts and everyone guesses</div>
+          <div className="flex gap-2"><span className="text-brand-yellow shrink-0">3.</span>Faster guesses earn more points — be the first to crack it!</div>
+          <div className="flex gap-2"><span className="text-brand-yellow shrink-0">4.</span>In Combo mode, also log states you drive through for bonus points</div>
+          <div className="flex gap-2"><span className="text-brand-yellow shrink-0">5.</span>Rare states (AK, HI, ND, SD, VT) are worth double — keep your eyes open!</div>
         </div>
       </div>
     </div>

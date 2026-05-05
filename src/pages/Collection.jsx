@@ -4,7 +4,7 @@ import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 import useStore from '../store/useStore'
 import BackButton from '../components/BackButton'
 
-const GEO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'
+const GEO_URL = '/us-states.json'
 
 const STATE_NAMES = {
   AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',

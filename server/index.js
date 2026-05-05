@@ -9,6 +9,7 @@ import { existsSync } from 'fs'
 import platesRouter from './routes/plates.js'
 import dailyRouter from './routes/daily.js'
 import groupsRouter from './routes/groups.js'
+import roadtripRouter from './routes/roadtrip.js'
 import leaderboardRouter from './routes/leaderboard.js'
 import authRouter from './routes/auth.js'
 import adminRouter from './routes/admin.js'
@@ -75,6 +76,7 @@ app.use('/feedback',         feedbackLimiter)
 app.use('/plates', platesRouter)
 app.use('/daily', dailyRouter)
 app.use('/groups', groupsRouter)
+app.use('/road-trip', roadtripRouter)
 app.use('/leaderboard', leaderboardRouter)
 app.use('/auth', authRouter)
 app.use('/admin', adminRouter)
