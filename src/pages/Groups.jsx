@@ -41,6 +41,7 @@ export default function Groups() {
   const [joinCode, setJoinCode]     = useState('')
   const [busy, setBusy]             = useState(false)
   const [mode, setMode]             = useState('plates')
+  const [joinError, setJoinError]   = useState('')
 
   // Road Trip state
   const [showRTCreate, setShowRTCreate] = useState(false)
@@ -83,15 +84,23 @@ export default function Groups() {
   const joinGroup = async () => {
     if (!joinCode.trim()) return
     setBusy(true)
+    setJoinError('')
     try {
       const { data } = await api.post('/groups/join', { code: joinCode.trim().toUpperCase() })
       setGroups(g => [data, ...g])
       setShowJoin(false)
       setJoinCode('')
+      setJoinError('')
       track('group_joined', { mode: data.mode })
-    } catch {
-      setJoinCode('')
-      setShowJoin(false)
+    } catch (err) {
+      const status = err.response?.status
+      if (status === 401) {
+        setJoinError('You need to be signed in to join a group.')
+      } else if (status === 404) {
+        setJoinError('Code not found — double-check it and try again.')
+      } else {
+        setJoinError(err.response?.data?.error || 'Could not join — try again.')
+      }
     } finally { setBusy(false) }
   }
 
@@ -337,15 +346,18 @@ export default function Groups() {
           <div className="text-sm font-bold text-white">Join with Code</div>
           <input
             value={joinCode}
-            onChange={e => setJoinCode(e.target.value.toUpperCase())}
+            onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError('') }}
             placeholder="ENTER CODE"
             maxLength={8}
-            className="w-full bg-navy-800 border border-navy-600 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 text-center tracking-widest font-bold focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            className={`w-full bg-navy-800 border rounded-xl px-4 py-3 text-white placeholder:text-slate-600 text-center tracking-widest font-bold focus:outline-none focus:ring-2 focus:ring-brand-blue ${joinError ? 'border-red-500' : 'border-navy-600'}`}
             onKeyDown={e => e.key === 'Enter' && joinGroup()}
             autoFocus
           />
+          {joinError && (
+            <div className="text-red-400 text-sm text-center">{joinError}</div>
+          )}
           <div className="flex gap-2">
-            <button onClick={() => setShowJoin(false)} className="flex-1 glass-card py-2 rounded-xl text-slate-400 text-sm">Cancel</button>
+            <button onClick={() => { setShowJoin(false); setJoinError('') }} className="flex-1 glass-card py-2 rounded-xl text-slate-400 text-sm">Cancel</button>
             <button onClick={joinGroup} disabled={!joinCode.trim() || busy}
               className="flex-1 bg-brand-blue disabled:opacity-40 text-white font-bold py-2 rounded-xl text-sm transition-all">
               {busy ? 'Joining...' : 'Join'}
