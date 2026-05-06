@@ -309,6 +309,8 @@ export default function GroupRoom() {
       await api.post(`/groups/${id}/challenges/${challengeId}/guess`, { guess: guess.trim() })
       setGuess(''); setActive(null)
       loadGroup()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not submit guess — try again')
     } finally { setSubmitting(false) }
   }
 
@@ -451,8 +453,8 @@ export default function GroupRoom() {
                     </div>
                   </div>
 
-                  {/* ── Guess input (window open, not own, not guessed) ── */}
-                  {!c.hasGuessed && !c.isOwn && !isClosed(c) && !isRevealed && (
+                  {/* ── Guess input (window open, not yet guessed) ── */}
+                  {!c.hasGuessed && !isClosed(c) && !isRevealed && (
                     <div className="border-t border-navy-700 p-3">
                       {active === c.id ? (
                         <div className="space-y-2 animate-fade-up">
@@ -486,10 +488,10 @@ export default function GroupRoom() {
                   )}
 
                   {/* ── Waiting for reveal ── */}
-                  {(c.hasGuessed || c.isOwn) && !isRevealed && !isClosed(c) && (
+                  {c.hasGuessed && !isRevealed && !isClosed(c) && (
                     <div className="border-t border-navy-700 px-4 py-3 flex items-center justify-center gap-2 text-xs text-slate-500">
                       <span className="animate-pulse">⏳</span>
-                      {c.isOwn ? 'Waiting for guesses…' : 'Guess submitted — waiting for window to close…'}
+                      Guess submitted — waiting for window to close…
                     </div>
                   )}
 

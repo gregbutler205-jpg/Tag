@@ -330,7 +330,6 @@ router.post('/:id/challenges/:cid/guess', requireAuth, async (req, res, next) =>
 
     const { data: challenge } = await supabase.from('group_challenges').select('*').eq('id', cid).single()
     if (!challenge) return res.status(404).json({ error: 'Challenge not found' })
-    if (challenge.submitted_by === req.user.id) return res.status(403).json({ error: 'You cannot guess on your own plate' })
     if (new Date(challenge.closes_at) < new Date()) return res.status(410).json({ error: 'Window has closed' })
 
     const submittedAt = new Date().toISOString()
