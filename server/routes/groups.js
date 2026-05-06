@@ -487,4 +487,28 @@ router.get('/:id/leaderboard', requireAuth, async (req, res, next) => {
   }
 })
 
+// DELETE /groups/:id — Permanently delete a group and all its data (owner only)
+router.delete('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const { data: group } = await supabase
+      .from('groups').select('owner_id').eq('id', req.params.id).single()
+    if (!group) return res.status(404).json({ error: 'Group not found' })
+    if (group.owner_id !== req.user.id) return res.status(403).json({ error: 'Only the creator can delete this group' })
+
+    // Delete child rows first to avoid FK violations
+    const { data: challenges } = await supabase
+      .from('group_challenges').select('id').eq('group_id', req.params.id)
+    if (challenges?.length) {
+      await supabase.from('group_guesses').delete().in('challenge_id', challenges.map(c => c.id))
+    }
+    await supabase.from('group_challenges').delete().eq('group_id', req.params.id)
+    await supabase.from('group_state_collection').delete().eq('group_id', req.params.id)
+    await supabase.from('group_daily_results').delete().eq('group_id', req.params.id)
+    await supabase.from('group_members').delete().eq('group_id', req.params.id)
+    await supabase.from('groups').delete().eq('id', req.params.id)
+
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
 export default router

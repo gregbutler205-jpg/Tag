@@ -354,6 +354,17 @@ export default function GroupRoom() {
     }
   }
 
+  // ── Delete group ─────────────────────────────────────────────────────────────
+  const deleteGroup = async () => {
+    if (!window.confirm(`Delete "${group?.name}"? This removes all plates, guesses, and scores permanently.`)) return
+    try {
+      await api.delete(`/groups/${id}`)
+      navigate('/groups')
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not delete group')
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const isClosed  = c => c.timeLeft === 'Closed'
   const canReveal = c => isClosed(c) && !c.revealed
@@ -991,6 +1002,18 @@ export default function GroupRoom() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Delete group (owner only) ─────────────────────────────────────── */}
+      {user?.id === group?.owner_id && (
+        <div className="border-t border-navy-700 pt-4 pb-2">
+          <button
+            onClick={deleteGroup}
+            className="w-full glass-card text-red-400 border border-red-500/20 hover:border-red-500/50 py-3 rounded-xl text-sm font-bold transition-all"
+          >
+            🗑 Delete Group
+          </button>
         </div>
       )}
 

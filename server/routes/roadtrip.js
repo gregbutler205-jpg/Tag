@@ -399,4 +399,27 @@ router.post('/:id/end', requireAuth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// DELETE /road-trip/:id — Permanently delete a session and all its data (host only)
+router.delete('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const { data: session } = await supabase.from('road_trip_sessions')
+      .select('host_id').eq('id', req.params.id).single()
+    if (!session) return res.status(404).json({ error: 'Session not found' })
+    if (session.host_id !== req.user.id) return res.status(403).json({ error: 'Only the host can delete this trip' })
+
+    // Delete child rows first to avoid FK violations
+    const { data: rounds } = await supabase.from('road_trip_rounds')
+      .select('id').eq('session_id', req.params.id)
+    if (rounds?.length) {
+      await supabase.from('road_trip_guesses').delete().in('round_id', rounds.map(r => r.id))
+    }
+    await supabase.from('road_trip_rounds').delete().eq('session_id', req.params.id)
+    await supabase.from('road_trip_state_spots').delete().eq('session_id', req.params.id)
+    await supabase.from('road_trip_players').delete().eq('session_id', req.params.id)
+    await supabase.from('road_trip_sessions').delete().eq('id', req.params.id)
+
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
 export default router

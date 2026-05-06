@@ -228,6 +228,16 @@ export default function RoadTripRoom() {
     }
   }
 
+  const deleteTrip = async () => {
+    if (!window.confirm('Delete this road trip? All rounds, guesses, and scores will be permanently removed.')) return
+    try {
+      await api.delete(`/road-trip/${id}`)
+      navigate('/groups')
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not delete trip')
+    }
+  }
+
   // ── Loading / error screens ──────────────────────────────────────────────────
 
   if (fetchErr && !gameState) {
@@ -564,14 +574,22 @@ export default function RoadTripRoom() {
         </div>
       )}
 
-      {/* ── Host: end trip ───────────────────────────────────────────────────── */}
-      {isHost && session.status !== 'ended' && (
-        <div className="border-t border-navy-700 pt-4">
+      {/* ── Host controls ────────────────────────────────────────────────────── */}
+      {isHost && (
+        <div className="border-t border-navy-700 pt-4 space-y-2">
+          {session.status !== 'ended' && (
+            <button
+              onClick={endTrip}
+              className="w-full glass-card text-red-400 border border-red-500/20 hover:border-red-500/50 py-3 rounded-xl text-sm font-bold transition-all"
+            >
+              🛑 End Trip
+            </button>
+          )}
           <button
-            onClick={endTrip}
+            onClick={deleteTrip}
             className="w-full glass-card text-red-400 border border-red-500/20 hover:border-red-500/50 py-3 rounded-xl text-sm font-bold transition-all"
           >
-            🛑 End Trip
+            🗑 Delete Trip
           </button>
         </div>
       )}
