@@ -310,6 +310,16 @@ export default function Submit() {
     }
   }
 
+  /* ── Save plate photo ───────────────────────────────────── */
+  const savePhoto = () => {
+    if (!photoData) return
+    const link = document.createElement('a')
+    link.download = `${plateText || 'plate'}-photo.jpg`
+    link.href = photoData
+    link.click()
+    track('save_plate_photo', { plate_text: plateText })
+  }
+
   /* ── Save as Image ──────────────────────────────────────── */
   const [saving, setSaving] = useState(false)
   const saveAsImage = async () => {
@@ -574,17 +584,27 @@ export default function Submit() {
             <PlateCard plate={plateText} state={state || undefined} result={result} animate easterEggPhrase={easterEggPhrase} />
           </div>
 
-          {/* Save as Image */}
-          <button
-            onClick={saveAsImage}
-            disabled={saving}
-            className="w-full flex items-center justify-center gap-2 glass-card hover:border-navy-500 text-slate-300 hover:text-white font-semibold py-3 rounded-2xl text-sm transition-all active:scale-[0.98] disabled:opacity-50"
-          >
-            {saving
-              ? <><span className="animate-spin">⟳</span> Saving...</>
-              : <><span>💾</span> Save as Image</>
-            }
-          </button>
+          {/* Save buttons */}
+          <div className={photoData ? 'grid grid-cols-2 gap-2' : ''}>
+            <button
+              onClick={saveAsImage}
+              disabled={saving}
+              className="w-full flex items-center justify-center gap-2 glass-card hover:border-navy-500 text-slate-300 hover:text-white font-semibold py-3 rounded-2xl text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {saving
+                ? <><span className="animate-spin">⟳</span> Saving...</>
+                : <><span>💾</span> Save as Image</>
+              }
+            </button>
+            {photoData && (
+              <button
+                onClick={savePhoto}
+                className="w-full flex items-center justify-center gap-2 glass-card hover:border-navy-500 text-slate-300 hover:text-white font-semibold py-3 rounded-2xl text-sm transition-all active:scale-[0.98]"
+              >
+                <span>📷</span> Save Photo
+              </button>
+            )}
+          </div>
 
           {/* Challenge verdict banner */}
           {challenge && (
