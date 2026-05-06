@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { interpretPlate, scoreGroupGuesses } from '../lib/openai.js'
 import { requireAuth, optionalAuth } from '../lib/auth.js'
+import { interpretLimiter } from '../lib/limiters.js'
 import supabase from '../lib/supabase.js'
 
 const router = Router()
@@ -277,7 +278,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 })
 
 // POST /groups/:id/plates — Submit plate to group
-router.post('/:id/plates', requireAuth, async (req, res, next) => {
+router.post('/:id/plates', requireAuth, interpretLimiter, async (req, res, next) => {
   try {
     const { text, state, windowHours = 12, photoData } = req.body
     if (!text?.trim()) return res.status(400).json({ error: 'Plate text required' })

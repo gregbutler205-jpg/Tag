@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { interpretPlate, scoreGroupGuesses } from '../lib/openai.js'
 import { requireAuth } from '../lib/auth.js'
+import { interpretLimiter } from '../lib/limiters.js'
 import supabase from '../lib/supabase.js'
 
 const router = Router()
@@ -233,7 +234,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 })
 
 // POST /road-trip/:id/round — Submit a plate to start a new round
-router.post('/:id/round', requireAuth, async (req, res, next) => {
+router.post('/:id/round', requireAuth, interpretLimiter, async (req, res, next) => {
   try {
     const { plateText, state } = req.body
     if (!plateText?.trim()) return res.status(400).json({ error: 'Plate text required' })
