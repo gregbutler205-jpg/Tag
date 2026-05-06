@@ -314,6 +314,30 @@ router.post('/:id/round/:rid/guess', requireAuth, async (req, res, next) => {
       score:            0,
     })
 
+    // Early completion: if all players (excluding the plate submitter, who
+    // typically won't guess their own plate) have now submitted, judge immediately
+    const [{ count: playerCount }, { count: guessCount }] = await Promise.all([
+      supabase.from('road_trip_players')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', req.params.id),
+      supabase.from('road_trip_guesses')
+        .select('*', { count: 'exact', head: true })
+        .eq('round_id', req.params.rid),
+    ])
+
+    if (playerCount && guessCount >= playerCount - 1) {
+      // Atomic claim — only one concurrent request wins
+      const { data: claimed } = await supabase.from('road_trip_rounds')
+        .update({ status: 'judging' })
+        .eq('id', req.params.rid)
+        .eq('status', 'active')
+        .select()
+
+      if (claimed?.length) {
+        judgeRound({ ...round, session_id: req.params.id }).catch(console.error)
+      }
+    }
+
     res.json({ ok: true, elapsedSeconds: elapsed })
   } catch (err) { next(err) }
 })
