@@ -147,16 +147,13 @@ export default function Daily() {
         </div>
       </div>
 
-      {/* ── Congratulations card (shown first after submitting) ── */}
+      {/* ── Feedback / reveal card (shown first after submitting) ── */}
       {submitted && (
         <div className="glass-card rounded-2xl p-5 text-center space-y-2 animate-fade-up border border-emerald-700/40">
           <div className="text-4xl">{revealed ? '📖' : '🌟'}</div>
           <div className="text-white font-black" style={{ fontSize: '1.5rem', lineHeight: 1.2 }}>
-            {revealed ? 'Now You Know!' : 'Streak Saved!'}
+            {revealed ? 'Now You Know!' : (result?.feedback || 'Streak Saved!')}
           </div>
-          {result?.feedback && !revealed && (
-            <div className="text-brand-yellow font-semibold text-base">{result.feedback}</div>
-          )}
           <div className="text-slate-400 text-sm">A new plate unlocks tomorrow</div>
         </div>
       )}
@@ -202,6 +199,12 @@ export default function Daily() {
               >
                 🤷 I Don't Know. Show Me.
               </button>
+            </div>
+          )}
+
+          {submitted && !revealed && (
+            <div className="pt-1 border-t border-navy-600">
+              <p className="text-brand-yellow font-bold text-sm text-center">🔥 Streak Saved!</p>
             </div>
           )}
 
