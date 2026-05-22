@@ -140,7 +140,7 @@ export default function PlateCropper({ imageSrc, onConfirm, onCancel }) {
       <div
         ref={containerRef}
         className="relative rounded-2xl overflow-hidden border border-navy-600 select-none"
-        style={{ touchAction: 'none', userSelect: 'none' }}
+        style={{ touchAction: 'none', userSelect: 'none', minHeight: '200px' }}
       >
         <img
           ref={imgRef}
@@ -148,6 +148,7 @@ export default function PlateCropper({ imageSrc, onConfirm, onCancel }) {
           alt="Crop preview"
           className="w-full block"
           draggable={false}
+          style={{ imageOrientation: 'from-image', maxHeight: '65vh', width: '100%', display: 'block' }}
         />
 
         {/* ── Dark mask (4 rects around the crop box) ── */}
