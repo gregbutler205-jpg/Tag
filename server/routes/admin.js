@@ -58,6 +58,31 @@ router.get('/pool', requireAuth, requireAdmin, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// PUT /admin/pool/:id — edit a pool plate
+router.put('/pool/:id', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const { plate_text, meaning, category, difficulty, state, status, goes_live_at } = req.body
+    const updates = {}
+    if (plate_text  !== undefined) updates.plate_text  = plate_text.toUpperCase().replace(/[^A-Z0-9 -]/g, '')
+    if (meaning     !== undefined) updates.meaning     = meaning.trim()
+    if (category    !== undefined) updates.category    = category.trim()
+    if (difficulty  !== undefined) updates.difficulty  = difficulty
+    if (state       !== undefined) updates.state       = state || null
+    if (status      !== undefined) updates.status      = status
+    if (goes_live_at !== undefined) updates.goes_live_at = goes_live_at || null
+
+    const { data, error } = await supabase
+      .from('daily_pool')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single()
+
+    if (error) return res.status(500).json({ error: error.message })
+    res.json(data)
+  } catch (err) { next(err) }
+})
+
 // DELETE /admin/pool/:id — remove from daily pool
 router.delete('/pool/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {

@@ -45,6 +45,9 @@ function DeleteBtn({ onDelete, label = '🗑 Delete', loading }) {
   )
 }
 
+const DIFFICULTIES = ['easy', 'medium', 'hard', 'legendary']
+const STATUSES     = ['pending', 'approved', 'rejected']
+
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('Pending')
   const [data, setData] = useState([])
@@ -52,6 +55,8 @@ export default function Admin() {
   const [error, setError] = useState(null)
   const [accessDenied, setAccessDenied] = useState(false)
   const [actionLoading, setActionLoading] = useState({})
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
 
   useEffect(() => { loadData() }, [activeTab])
 
@@ -94,6 +99,32 @@ export default function Admin() {
   function confirmDelete(id, path, label) {
     if (!window.confirm(`Delete this ${label}? This cannot be undone.`)) return
     doAction(id, path, 'DELETE')
+  }
+
+  function startEdit(plate) {
+    setEditingId(plate.id)
+    setEditForm({
+      plate_text:   plate.plate_text  || '',
+      meaning:      plate.meaning     || '',
+      category:     plate.category    || '',
+      difficulty:   plate.difficulty  || 'medium',
+      state:        plate.state       || '',
+      status:       plate.status      || 'pending',
+      goes_live_at: plate.goes_live_at ? plate.goes_live_at.slice(0, 10) : '',
+    })
+  }
+
+  async function saveEdit(id) {
+    setActionLoading(prev => ({ ...prev, [id]: true }))
+    try {
+      const { data: updated } = await api.put(`/admin/pool/${id}`, editForm)
+      setData(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r))
+      setEditingId(null)
+    } catch (err) {
+      alert('Save failed: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setActionLoading(prev => ({ ...prev, [id]: false }))
+    }
   }
 
   // Check if user is even logged in (no token = definitely not admin)
@@ -232,46 +263,136 @@ export default function Admin() {
           {activeTab === 'Pool' && (
             <div className="space-y-2">
               <p className="text-xs text-slate-500">{data.length} plates in pool</p>
-              <div className="glass-card rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-navy-700">
-                        <th className="text-left px-3 py-2 text-xs font-bold text-slate-400">Plate</th>
-                        <th className="text-left px-3 py-2 text-xs font-bold text-slate-400">Meaning</th>
-                        <th className="text-left px-3 py-2 text-xs font-bold text-slate-400 whitespace-nowrap">Difficulty</th>
-                        <th className="text-left px-3 py-2 text-xs font-bold text-slate-400 whitespace-nowrap">Status</th>
-                        <th className="text-left px-3 py-2 text-xs font-bold text-slate-400 whitespace-nowrap">Shown</th>
-                        <th className="px-3 py-2 text-xs font-bold text-slate-400"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.map((plate, idx) => (
-                        <tr key={plate.id} className={`border-b border-navy-800/50 hover:bg-navy-700/30 ${idx % 2 === 0 ? '' : 'bg-navy-800/20'}`}>
-                          <td className="px-3 py-2">
-                            <div>
-                              <span className="text-white font-black tracking-wide text-xs">{plate.plate_text}</span>
-                              {plate.state && <span className="text-slate-600 text-xs ml-1">{plate.state}</span>}
+              <div className="space-y-2">
+                {data.map(plate => {
+                  const isEditing = editingId === plate.id
+                  const busy = !!actionLoading[plate.id]
+                  return (
+                    <div key={plate.id} className="glass-card rounded-2xl overflow-hidden">
+                      {/* ── Summary row ── */}
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-white font-black tracking-wider text-sm">{plate.plate_text}</span>
+                            {plate.state && <span className="text-xs text-slate-500 bg-navy-700 px-1.5 py-0.5 rounded-full">{plate.state}</span>}
+                            <StatusBadge status={plate.status} />
+                            <DifficultyBadge difficulty={plate.difficulty} />
+                          </div>
+                          <p className="text-slate-400 text-xs mt-0.5 line-clamp-1">{plate.meaning}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => isEditing ? setEditingId(null) : startEdit(plate)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${
+                              isEditing
+                                ? 'bg-navy-700 border-navy-600 text-slate-400'
+                                : 'bg-brand-blue/20 border-brand-blue/40 text-brand-blue hover:bg-brand-blue/30'
+                            }`}
+                          >
+                            {isEditing ? 'Cancel' : '✏️ Edit'}
+                          </button>
+                          <DeleteBtn
+                            loading={busy && !isEditing}
+                            onDelete={() => confirmDelete(plate.id, `/admin/pool/${plate.id}`, 'plate')}
+                            label="🗑"
+                          />
+                        </div>
+                      </div>
+
+                      {/* ── Inline edit form ── */}
+                      {isEditing && (
+                        <div className="border-t border-navy-700 px-4 py-4 space-y-3 bg-navy-900/40">
+                          {/* Plate text + State */}
+                          <div className="flex gap-2">
+                            <div className="flex-1 space-y-1">
+                              <label className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Plate Text</label>
+                              <input
+                                value={editForm.plate_text}
+                                onChange={e => setEditForm(f => ({ ...f, plate_text: e.target.value.toUpperCase().replace(/[^A-Z0-9 -]/g, '') }))}
+                                maxLength={8}
+                                className="w-full bg-navy-800 border border-navy-600 rounded-lg px-3 py-2 text-white font-black tracking-widest text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                              />
                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-slate-400 text-xs max-w-[180px]">
-                            <span className="line-clamp-2">{plate.meaning}</span>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap"><DifficultyBadge difficulty={plate.difficulty} /></td>
-                          <td className="px-3 py-2 whitespace-nowrap"><StatusBadge status={plate.status} /></td>
-                          <td className="px-3 py-2 text-slate-400 text-xs">{plate.times_shown ?? 0}</td>
-                          <td className="px-3 py-2 text-right">
-                            <DeleteBtn
-                              loading={!!actionLoading[plate.id]}
-                              onDelete={() => confirmDelete(plate.id, `/admin/pool/${plate.id}`, 'plate')}
-                              label="🗑"
+                            <div className="w-24 space-y-1">
+                              <label className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">State</label>
+                              <input
+                                value={editForm.state}
+                                onChange={e => setEditForm(f => ({ ...f, state: e.target.value.toUpperCase().slice(0, 2) }))}
+                                placeholder="CA"
+                                maxLength={2}
+                                className="w-full bg-navy-800 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Meaning */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Meaning</label>
+                            <textarea
+                              value={editForm.meaning}
+                              onChange={e => setEditForm(f => ({ ...f, meaning: e.target.value }))}
+                              rows={2}
+                              className="w-full bg-navy-800 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50 resize-none"
                             />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+
+                          {/* Category + Difficulty + Status */}
+                          <div className="flex gap-2">
+                            <div className="flex-1 space-y-1">
+                              <label className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Category</label>
+                              <input
+                                value={editForm.category}
+                                onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
+                                placeholder="humor"
+                                className="w-full bg-navy-800 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                              />
+                            </div>
+                            <div className="w-32 space-y-1">
+                              <label className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Difficulty</label>
+                              <select
+                                value={editForm.difficulty}
+                                onChange={e => setEditForm(f => ({ ...f, difficulty: e.target.value }))}
+                                className="w-full bg-navy-800 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                              >
+                                {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
+                              </select>
+                            </div>
+                            <div className="w-32 space-y-1">
+                              <label className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Status</label>
+                              <select
+                                value={editForm.status}
+                                onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
+                                className="w-full bg-navy-800 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                              >
+                                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Goes live date */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Goes Live (optional)</label>
+                            <input
+                              type="date"
+                              value={editForm.goes_live_at}
+                              onChange={e => setEditForm(f => ({ ...f, goes_live_at: e.target.value }))}
+                              className="bg-navy-800 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                            />
+                          </div>
+
+                          {/* Save button */}
+                          <button
+                            onClick={() => saveEdit(plate.id)}
+                            disabled={busy}
+                            className="w-full bg-brand-blue hover:brightness-110 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
+                          >
+                            {busy ? 'Saving…' : '💾 Save Changes'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
