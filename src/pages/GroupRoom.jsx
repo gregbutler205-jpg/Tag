@@ -320,7 +320,7 @@ export default function GroupRoom() {
     try {
       const { data } = await api.post(`/groups/${id}/challenges/${challengeId}/reveal`)
       setRevealData(prev => ({ ...prev, [challengeId]: data }))
-      const mine = data.guesses?.find(g => g.userId === user?.id)
+      const mine = data.guesses?.find(g => g.username === user?.name)
       if (mine?.score > 0) addPoints(mine.score)
       loadGroup()
       loadLeaderboard()
