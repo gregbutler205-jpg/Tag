@@ -154,6 +154,9 @@ export default function Daily() {
           <div className="text-white font-black" style={{ fontSize: '1.5rem', lineHeight: 1.2 }}>
             {revealed ? 'Now You Know!' : 'Streak Saved!'}
           </div>
+          {result?.feedback && !revealed && (
+            <div className="text-brand-yellow font-semibold text-base">{result.feedback}</div>
+          )}
           <div className="text-slate-400 text-sm">A new plate unlocks tomorrow</div>
         </div>
       )}
@@ -207,13 +210,6 @@ export default function Daily() {
               <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">The Answer</p>
               <p className="text-white font-semibold text-base leading-snug">{daily.meaning}</p>
               <p className="text-slate-500 text-xs">No points this time — come back tomorrow! 🌟</p>
-            </div>
-          )}
-          {submitted && result && !revealed && (
-            <div className="pt-1 border-t border-navy-600 space-y-1">
-              {result.feedback && (
-                <p className="text-slate-400 text-sm">{result.feedback}</p>
-              )}
             </div>
           )}
         </PlateCard>
