@@ -8,15 +8,15 @@ export default function PlateCard({ plate, state, result, children, animate = fa
       <div className="plate-wrap relative flex justify-center">
         <div className="plate w-full max-w-xs mx-auto px-8 py-4 text-center">
           {state && (
-            <div className="text-[10px] font-bold tracking-[0.3em] text-navy-700 mb-1 uppercase">
+            <div className="text-[10px] font-bold tracking-[0.3em] text-white/70 mb-1 uppercase">
               {state}
             </div>
           )}
-          <div className="text-4xl font-black tracking-[0.2em] text-slate-900 leading-none">
+          <div className="text-4xl font-black tracking-[0.2em] text-white leading-none drop-shadow-md">
             {plate || '???'}
           </div>
           {!state && (
-            <div className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 mt-1">
+            <div className="text-[10px] font-semibold tracking-[0.2em] text-white/50 mt-1">
               VANITY PLATE
             </div>
           )}

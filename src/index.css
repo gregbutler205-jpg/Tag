@@ -24,53 +24,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Authentic plate styling */
+/* Authentic plate styling — blue plate photo */
 .plate {
-  background: linear-gradient(145deg, #fef9e7 0%, #fef3c7 50%, #fde68a 100%);
+  background-image: url('/blank-plate.jpg');
+  background-size: cover;
+  background-position: center;
   border-radius: 8px;
   position: relative;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.8),
-    inset 0 -1px 0 rgba(0,0,0,0.1),
-    0 4px 20px rgba(0,0,0,0.5),
-    0 0 0 3px #1e3a8a,
-    0 0 0 5px #f59e0b;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
   font-family: 'Roboto Mono', 'Courier New', monospace;
-  font-weight: 700;
-  letter-spacing: 0.15em;
+  font-weight: 900;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #1e293b;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
-
-.plate::before,
-.plate::after {
-  content: '';
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #94a3b8, #475569);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
-  top: 8px;
-}
-.plate::before { left: 10px; }
-.plate::after { right: 10px; }
-
-/* Bottom bolts via pseudo on wrapper */
-.plate-wrap::before,
-.plate-wrap::after {
-  content: '';
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #94a3b8, #475569);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
-  bottom: 8px;
-  z-index: 1;
-}
-.plate-wrap::before { left: 10px; }
-.plate-wrap::after { right: 10px; }
 
 /* Glassmorphism card */
 .glass-card {

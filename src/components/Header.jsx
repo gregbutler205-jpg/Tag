@@ -34,7 +34,7 @@ export default function Header({ logoVisible = true }) {
         <Link to="/" className="flex items-center justify-center flex-1">
           {!imgFailed ? (
             <img
-              src="/logo.png"
+              src="/logo-tag.png"
               alt="Tag Wizard"
               data-splash-target
               style={{

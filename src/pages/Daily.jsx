@@ -147,11 +147,14 @@ export default function Daily() {
         </div>
       </div>
 
-      {/* Already done banner */}
-      {alreadyDone && !loading && (
-        <div className="flex items-center gap-2 bg-emerald-900/30 border border-emerald-700/40 rounded-xl px-4 py-3">
-          <span className="text-emerald-400 text-lg">✓</span>
-          <span className="text-emerald-300 text-sm font-semibold">You completed today's challenge!</span>
+      {/* ── Congratulations card (shown first after submitting) ── */}
+      {submitted && (
+        <div className="glass-card rounded-2xl p-5 text-center space-y-2 animate-fade-up border border-emerald-700/40">
+          <div className="text-4xl">{revealed ? '📖' : '🌟'}</div>
+          <div className="text-white font-black" style={{ fontSize: '1.5rem', lineHeight: 1.2 }}>
+            {revealed ? 'Now You Know!' : 'Streak Saved!'}
+          </div>
+          <div className="text-slate-400 text-sm">A new plate unlocks tomorrow</div>
         </div>
       )}
 
@@ -216,14 +219,11 @@ export default function Daily() {
         </PlateCard>
       )}
 
-      {/* Tomorrow teaser */}
-      {submitted && (
-        <div className="glass-card rounded-2xl p-4 text-center space-y-1 animate-fade-up">
-          <div className="text-2xl">{revealed ? '📖' : '🌟'}</div>
-          <div className="text-white font-semibold">
-            {revealed ? 'Now you know!' : 'Streak saved!'}
-          </div>
-          <div className="text-slate-500 text-sm">A new plate unlocks tomorrow</div>
+      {/* Already done badge (shown below plate after submitting) */}
+      {(alreadyDone || submitted) && !loading && (
+        <div className="flex items-center justify-center gap-2 bg-emerald-900/30 border border-emerald-700/40 rounded-xl px-4 py-2.5">
+          <span className="text-emerald-400">✓</span>
+          <span className="text-emerald-300 text-sm font-semibold">You completed today's challenge!</span>
         </div>
       )}
 

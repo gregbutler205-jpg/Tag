@@ -502,14 +502,47 @@ export default function Submit() {
             <label className="text-xs text-slate-500 uppercase tracking-wide font-semibold">
               Plate Text
             </label>
-            <input
-              ref={plateInputRef}
-              value={plateText}
-              onChange={e => setPlateText(e.target.value.toUpperCase().replace(/[^A-Z0-9 -]/g, ''))}
-              placeholder="GR8FUL"
-              maxLength={8}
-              className="plate w-full px-6 py-4 text-center text-3xl tracking-[0.3em] focus:outline-none focus:ring-4 focus:ring-brand-blue/40 placeholder:text-slate-400"
-            />
+            <div
+              className="relative w-full mx-auto cursor-text"
+              style={{ maxWidth: '360px' }}
+              onClick={() => plateInputRef.current?.focus()}
+            >
+              <img
+                src="/blank-plate.jpg"
+                alt=""
+                className="w-full rounded-lg select-none pointer-events-none"
+                style={{ display: 'block' }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center px-10">
+                <input
+                  ref={plateInputRef}
+                  value={plateText}
+                  onChange={e => setPlateText(e.target.value.toUpperCase().replace(/[^A-Z0-9 -]/g, ''))}
+                  placeholder="GR8FUL"
+                  maxLength={8}
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    width: '100%',
+                    textAlign: 'center',
+                    color: 'white',
+                    fontSize: 'clamp(1.6rem, 6vw, 2.4rem)',
+                    fontWeight: 900,
+                    letterSpacing: '0.25em',
+                    fontFamily: "'Roboto Mono', 'Courier New', monospace",
+                    textTransform: 'uppercase',
+                    textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+                    caretColor: 'white',
+                  }}
+                  className="placeholder:text-white/40"
+                />
+              </div>
+            </div>
           </div>
 
           {/* ── State selector ── */}
