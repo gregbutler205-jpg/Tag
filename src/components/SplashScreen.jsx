@@ -53,7 +53,7 @@ export default function SplashScreen({ onComplete }) {
       }}>
         {!imgError ? (
           <img
-            src="/logo-tag.png"
+            src="/logo-splash.jpg"
             alt="Tag Wizard"
             style={{ maxHeight: '220px', maxWidth: '85vw', width: 'auto', height: 'auto', display: 'block' }}
             onError={() => setImgError(true)}
