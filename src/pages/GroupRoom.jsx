@@ -331,6 +331,16 @@ export default function GroupRoom() {
     }
   }
 
+  // ── Close challenge early (owner only) ───────────────────────────────────────
+  const closeEarly = async (challengeId) => {
+    try {
+      await api.post(`/groups/${id}/challenges/${challengeId}/close`)
+      loadGroup()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not close challenge')
+    }
+  }
+
   // ── Log a state ───────────────────────────────────────────────────────────────
   const logState = async (abbr) => {
     if (groupStates.myStates.includes(abbr)) return
@@ -503,6 +513,18 @@ export default function GroupRoom() {
                     <div className="border-t border-navy-700 px-4 py-3 flex items-center justify-center gap-2 text-xs text-slate-500">
                       <span className="animate-pulse">⏳</span>
                       Guess submitted — waiting for window to close…
+                    </div>
+                  )}
+
+                  {/* ── Close Early button (owner only, window still open) ── */}
+                  {!isClosed(c) && !c.revealed && user?.id === group?.owner_id && (
+                    <div className="border-t border-navy-700 px-4 py-2 flex justify-end">
+                      <button
+                        onClick={() => closeEarly(c.id)}
+                        className="text-xs text-slate-500 hover:text-brand-yellow font-semibold transition-colors"
+                      >
+                        ⏩ Close Early
+                      </button>
                     </div>
                   )}
 

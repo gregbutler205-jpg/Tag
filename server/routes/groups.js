@@ -280,7 +280,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 // POST /groups/:id/plates — Submit plate to group
 router.post('/:id/plates', requireAuth, interpretLimiter, async (req, res, next) => {
   try {
-    const { text, state, windowHours = 12, photoData } = req.body
+    const { text, state, windowHours = 4, photoData } = req.body
     if (!text?.trim()) return res.status(400).json({ error: 'Plate text required' })
 
     const plateUpper = text.toUpperCase().replace(/[^A-Z0-9 -]/g, '')
@@ -349,6 +349,23 @@ router.post('/:id/challenges/:cid/guess', requireAuth, async (req, res, next) =>
   } catch (err) {
     next(err)
   }
+})
+
+// POST /groups/:id/challenges/:cid/close — owner force-closes the guessing window early
+router.post('/:id/challenges/:cid/close', requireAuth, async (req, res, next) => {
+  try {
+    const { data: group } = await supabase
+      .from('groups').select('owner_id').eq('id', req.params.id).single()
+    if (!group) return res.status(404).json({ error: 'Group not found' })
+    if (group.owner_id !== req.user.id) return res.status(403).json({ error: 'Only the group owner can close challenges early' })
+
+    await supabase
+      .from('group_challenges')
+      .update({ closes_at: new Date().toISOString() })
+      .eq('id', req.params.cid)
+
+    res.json({ ok: true })
+  } catch (err) { next(err) }
 })
 
 // POST /groups/:id/challenges/:cid/reveal — score all guesses + award global points
