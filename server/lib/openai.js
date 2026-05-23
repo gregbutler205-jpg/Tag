@@ -10,7 +10,17 @@ export function getClient() {
   return _client
 }
 
-// ── Grok client (used for plate interpretation + challenge) ───────────────────
+// ── Fireworks client (primary — DeepSeek-V4-Flash) ───────────────────────────
+let _fireworksClient = null
+function getFireworksClient() {
+  if (!_fireworksClient) {
+    if (!process.env.FIREWORKS_API_KEY) throw new Error('FIREWORKS_API_KEY is not set in server/.env')
+    _fireworksClient = new OpenAI({ apiKey: process.env.FIREWORKS_API_KEY, baseURL: 'https://api.fireworks.ai/inference/v1' })
+  }
+  return _fireworksClient
+}
+
+// ── Grok client (fallback — Grok-3) ──────────────────────────────────────────
 let _grokClient = null
 function getGrokClient() {
   if (!_grokClient) {
@@ -19,6 +29,9 @@ function getGrokClient() {
   }
   return _grokClient
 }
+
+const PRIMARY_MODEL  = process.env.FIREWORKS_MODEL  || 'accounts/fireworks/models/deepseek-v4-flash'
+const FALLBACK_MODEL = process.env.FALLBACK_MODEL   || 'grok-3'
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are an expert interpreter of US vanity license plates.
@@ -278,14 +291,21 @@ const POINT_MULTIPLIERS = { common: 1, uncommon: 1.5, rare: 2, epic: 3, legendar
 export async function interpretPlate(plateText, context = {}) {
   const messages = buildMessages(plateText, context)
 
-  const response = await getGrokClient().chat.completions.create({
-    model:                 process.env.INTERPRETATION_MODEL || 'grok-3',
-    messages,
-    temperature:           0.2,
-    max_tokens:            400,
-  })
+  let rawContent
+  try {
+    const response = await getFireworksClient().chat.completions.create({
+      model: PRIMARY_MODEL, messages, temperature: 0.2, max_tokens: 400,
+    })
+    rawContent = response.choices[0].message.content
+  } catch (err) {
+    console.warn('[interpretPlate] Fireworks failed, falling back to Grok-3:', err.message)
+    const response = await getGrokClient().chat.completions.create({
+      model: FALLBACK_MODEL, messages, temperature: 0.2, max_tokens: 400,
+    })
+    rawContent = response.choices[0].message.content
+  }
 
-  const raw        = safeParseJSON(response.choices[0].message.content, plateText)
+  const raw        = safeParseJSON(rawContent, plateText)
   const confidence = Math.max(0, Math.min(100, raw.confidence))
   const rarity     = mapRarity(confidence)
   const points     = Math.round(50 * (POINT_MULTIPLIERS[rarity] ?? 1))
@@ -345,17 +365,25 @@ ${guessList}`
 
   let raw
   try {
-    const response = await getGrokClient().chat.completions.create({
-      model:       process.env.INTERPRETATION_MODEL || 'grok-3',
-      messages:    [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
-      temperature: 0.2,
-      max_tokens:  400,
-    })
-    const cleaned = response.choices[0].message.content
-      .replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+    let content
+    try {
+      const response = await getFireworksClient().chat.completions.create({
+        model: PRIMARY_MODEL, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+        temperature: 0.2, max_tokens: 400,
+      })
+      content = response.choices[0].message.content
+    } catch (err) {
+      console.warn('[scoreGroupGuesses] Fireworks failed, falling back to Grok-3:', err.message)
+      const response = await getGrokClient().chat.completions.create({
+        model: FALLBACK_MODEL, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+        temperature: 0.2, max_tokens: 400,
+      })
+      content = response.choices[0].message.content
+    }
+    const cleaned = content.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     raw = JSON.parse(cleaned)
   } catch {
-    // Fallback: mark all as disagree so the reveal still completes
+    // Both failed — mark all as disagree so the reveal still completes
     return guesses.map(g => ({ id: g.id, verdict: 'disagree', bonusPoints: 0, reasoning: 'Could not evaluate.' }))
   }
 
@@ -413,20 +441,26 @@ State: ${context.state || 'unknown'}
 AI interpretation: ${aiMeaning}
 User interpretation: ${userMeaning}`
 
-  const response = await getGrokClient().chat.completions.create({
-    model:                 process.env.INTERPRETATION_MODEL || 'grok-3',
-    messages: [
-      { role: 'system', content: systemMsg },
-      { role: 'user',   content: userMsg   },
-    ],
-    temperature:           0.2,
-    max_tokens:            200,
-  })
-
   let raw
   try {
-    const cleaned = response.choices[0].message.content
-      .replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+    let content
+    try {
+      const response = await getFireworksClient().chat.completions.create({
+        model: PRIMARY_MODEL,
+        messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+        temperature: 0.2, max_tokens: 200,
+      })
+      content = response.choices[0].message.content
+    } catch (err) {
+      console.warn('[challengeInterpretation] Fireworks failed, falling back to Grok-3:', err.message)
+      const response = await getGrokClient().chat.completions.create({
+        model: FALLBACK_MODEL,
+        messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+        temperature: 0.2, max_tokens: 200,
+      })
+      content = response.choices[0].message.content
+    }
+    const cleaned = content.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     raw = JSON.parse(cleaned)
   } catch {
     raw = { verdict: 'disagree', reasoning: 'Could not evaluate the interpretation.', revised_meaning: null }
