@@ -11,13 +11,6 @@ function getTodayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function getDailyIndex() {
-  const start = new Date('2026-01-01').getTime()
-  const now = Date.now()
-  const days = Math.floor((now - start) / 86400000)
-  return Math.max(0, days)
-}
-
 // GET /daily — Get today's plate
 router.get('/', optionalAuth, async (req, res, next) => {
   try {
@@ -39,22 +32,28 @@ router.get('/', optionalAuth, async (req, res, next) => {
       })
     }
 
-    // Pick from daily_pool using day-index rotation
-    const { count } = await supabase
-      .from('daily_pool')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'approved')
-
-    const idx = getDailyIndex() % (count || 1)
-
-    const { data: poolPlates } = await supabase
+    // If a plate was already selected today, keep showing it (daily consistency lock)
+    const { data: alreadyToday } = await supabase
       .from('daily_pool')
       .select('*')
       .eq('status', 'approved')
-      .order('created_at', { ascending: true })
-      .range(idx, idx)
+      .gte('last_shown_at', today + 'T00:00:00.000Z')
+      .order('last_shown_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    const seed = poolPlates?.[0]
+    // Otherwise pick the approved plate least recently shown (null = never shown, shown first)
+    let seed = alreadyToday
+    if (!seed) {
+      const { data: nextPlate } = await supabase
+        .from('daily_pool')
+        .select('*')
+        .eq('status', 'approved')
+        .order('last_shown_at', { ascending: true, nullsFirst: true })
+        .limit(1)
+        .maybeSingle()
+      seed = nextPlate
+    }
 
     if (!seed) {
       // No approved plates in DB — use emergency fallback
