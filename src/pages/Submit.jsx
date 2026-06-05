@@ -311,10 +311,27 @@ export default function Submit() {
   }
 
   /* ── Save plate photo ───────────────────────────────────── */
-  const savePhoto = () => {
+  const savePhoto = async () => {
     if (!photoData) return
+    const filename = `${plateText || 'plate'}-photo.jpg`
+
+    // iOS: share a File so "Save Image" in the native sheet goes straight to Photos
+    const blob = await (await fetch(photoData)).blob()
+    const file = new File([blob], filename, { type: 'image/jpeg' })
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] })
+        track('save_plate_photo', { plate_text: plateText })
+        return
+      } catch (err) {
+        if (err.name === 'AbortError') return // user cancelled
+        // fall through to desktop path
+      }
+    }
+
+    // Desktop fallback
     const link = document.createElement('a')
-    link.download = `${plateText || 'plate'}-photo.jpg`
+    link.download = filename
     link.href = photoData
     link.click()
     track('save_plate_photo', { plate_text: plateText })
@@ -330,8 +347,25 @@ export default function Submit() {
         backgroundColor: '#0d1626',
         pixelRatio: 2,
       })
+      const filename = `${plateText || 'plate'}-tag-wizard.png`
+
+      // iOS: share a File so "Save Image" in the native sheet goes straight to Photos
+      const blob = await (await fetch(dataUrl)).blob()
+      const file = new File([blob], filename, { type: 'image/png' })
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] })
+          track('save_as_image', { plate_text: plateText })
+          return
+        } catch (err) {
+          if (err.name === 'AbortError') return // user cancelled
+          // fall through to desktop path
+        }
+      }
+
+      // Desktop fallback
       const link = document.createElement('a')
-      link.download = `${plateText || 'plate'}-tag-wizard.png`
+      link.download = filename
       link.href = dataUrl
       link.click()
       track('save_as_image', { plate_text: plateText })
