@@ -10,7 +10,7 @@ export default function SignIn() {
   const [email, setEmail]     = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
-  const { setUser, setPoints, setStatesCollected } = useStore()
+  const { setUser, setPoints, setStatesCollected, setAvatar } = useStore()
   const navigate              = useNavigate()
 
   const switchMode = (m) => { setMode(m); setError(null) }
@@ -22,10 +22,11 @@ export default function SignIn() {
       const { data } = await api.post('/auth/login', { username: username.trim() })
       localStorage.setItem('token', data.token)
       setUser(data.user)
-      // Sync points + states from DB immediately after sign-in
+      // Sync points, states, and avatar from DB immediately after sign-in
       api.get('/auth/me').then(({ data: me }) => {
         setPoints(me.points)
         setStatesCollected(me.statesCollected)
+        setAvatar(me.avatar || null)
       }).catch(() => {})
       track('sign_in')
       navigate('/')

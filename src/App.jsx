@@ -38,10 +38,10 @@ function NotFound() {
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
-  const { hasSeenWelcome, setUser, setPoints, setStatesCollected } = useStore()
+  const { hasSeenWelcome, setUser, setPoints, setStatesCollected, setAvatar } = useStore()
 
   // On every app launch, if the user is signed in, pull their authoritative
-  // points + states from the DB so all devices stay in sync
+  // points, states, and avatar from the DB so all devices stay in sync
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) return
@@ -50,6 +50,7 @@ export default function App() {
         setUser({ id: data.id, name: data.name, email: data.email })
         setPoints(data.points)
         setStatesCollected(data.statesCollected)
+        setAvatar(data.avatar || null)
       })
       .catch(() => {
         // Expired / invalid token — clear it silently

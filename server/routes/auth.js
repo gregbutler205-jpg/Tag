@@ -97,7 +97,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const { data: userData } = await supabase
       .from('users')
-      .select('display_name, total_points')
+      .select('display_name, total_points, avatar_base64')
       .eq('id', req.user.id)
       .single()
 
@@ -112,6 +112,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
       email:           req.user.email,
       points:          userData?.total_points  || 0,
       statesCollected: states?.map(s => s.state) || [],
+      avatar:          userData?.avatar_base64 || null,
     })
   } catch (err) { next(err) }
 })
@@ -131,37 +132,62 @@ router.post('/sync-points', requireAuth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// PUT /auth/profile — update display name
+// PUT /auth/profile — update display name and/or avatar
 router.put('/profile', requireAuth, async (req, res, next) => {
   try {
-    const { displayName } = req.body
-    const trimmed = displayName?.trim()
-    if (!trimmed || trimmed.length < 2 || trimmed.length > 30) {
-      return res.status(400).json({ error: 'Name must be 2–30 characters' })
+    const { displayName, avatarBase64 } = req.body
+    const updates = {}
+
+    // ── Display name ──────────────────────────────────────────────────────────
+    if (displayName !== undefined) {
+      const trimmed = displayName?.trim()
+      if (!trimmed || trimmed.length < 2 || trimmed.length > 30) {
+        return res.status(400).json({ error: 'Name must be 2–30 characters' })
+      }
+
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .ilike('display_name', trimmed)
+        .neq('id', req.user.id)
+        .limit(1)
+
+      if (existing?.length) {
+        return res.status(400).json({ error: 'That username is already taken' })
+      }
+
+      updates.display_name = trimmed
     }
 
-    // Check if name already taken by someone else
-    const { data: existing } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('display_name', trimmed)
-      .neq('id', req.user.id)
-      .limit(1)
+    // ── Avatar ────────────────────────────────────────────────────────────────
+    if (avatarBase64 !== undefined) {
+      // null = remove; data URL = set (max ~150 KB base64)
+      if (avatarBase64 !== null && (
+        !avatarBase64.startsWith('data:image/') || avatarBase64.length > 200000
+      )) {
+        return res.status(400).json({ error: 'Invalid avatar' })
+      }
+      updates.avatar_base64 = avatarBase64
+    }
 
-    if (existing?.length) {
-      return res.status(400).json({ error: 'That username is already taken' })
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ error: 'Nothing to update' })
     }
 
     const { error } = await supabase
       .from('users')
-      .update({ display_name: trimmed })
+      .update(updates)
       .eq('id', req.user.id)
 
     if (error) return res.status(500).json({ error: error.message })
 
-    // Issue a fresh token with updated name
-    const token = signToken({ id: req.user.id, email: req.user.email, name: trimmed })
-    res.json({ token, user: { id: req.user.id, email: req.user.email, name: trimmed } })
+    // If display name changed, issue a fresh token with the new name
+    if (updates.display_name) {
+      const token = signToken({ id: req.user.id, email: req.user.email, name: updates.display_name })
+      return res.json({ token, user: { id: req.user.id, email: req.user.email, name: updates.display_name } })
+    }
+
+    res.json({ ok: true })
   } catch (err) {
     next(err)
   }

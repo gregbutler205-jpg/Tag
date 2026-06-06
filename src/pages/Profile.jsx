@@ -65,6 +65,8 @@ export default function Profile() {
     if (!file) return
     const b64 = await compressToBase64(file)
     setAvatar(b64)
+    // Persist to server so avatar syncs across website and PWA
+    api.put('/auth/profile', { avatarBase64: b64 }).catch(() => {})
   }
 
   function startEditName() {
@@ -110,18 +112,20 @@ export default function Profile() {
       {/* Avatar card */}
       <div className="glass-card rounded-2xl p-6 text-center space-y-3">
         <div className="relative inline-block">
-          {/* Hidden file input */}
+          {/* File input — label-based triggering is required for iOS PWA standalone mode;
+              programmatic .click() is blocked there */}
           <input
+            id="avatar-file-input"
             ref={fileRef}
             type="file"
             accept="image/*"
             className="hidden"
             onChange={handleAvatarChange}
           />
-          {/* Avatar circle — tap to change */}
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="relative w-20 h-20 rounded-full mx-auto block overflow-hidden shadow-glow focus:outline-none group"
+          {/* Avatar circle — label triggers file picker reliably on iOS PWA */}
+          <label
+            htmlFor="avatar-file-input"
+            className="relative w-20 h-20 rounded-full mx-auto block overflow-hidden shadow-glow cursor-pointer group"
             title="Tap to change photo"
           >
             {avatarBase64 ? (
@@ -138,19 +142,19 @@ export default function Profile() {
                 <path fillRule="evenodd" d="M9.344 3.071a49.52 49.52 0 015.312 0c.967.052 1.83.585 2.332 1.39l.821 1.317c.24.383.645.643 1.11.71.386.054.77.113 1.152.177 1.432.239 2.429 1.493 2.429 2.909V18a3 3 0 01-3 3h-15a3 3 0 01-3-3V9.574c0-1.416.997-2.67 2.429-2.909.382-.064.766-.123 1.151-.178a1.56 1.56 0 001.11-.71l.822-1.315a2.942 2.942 0 012.332-1.39zM6.75 12.75a5.25 5.25 0 1110.5 0 5.25 5.25 0 01-10.5 0zM12 10.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" clipRule="evenodd"/>
               </svg>
             </div>
-          </button>
+          </label>
           <span className="absolute -bottom-1 -right-1 text-xl">{rank.icon}</span>
           {/* Edit badge */}
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="absolute -top-1 -right-1 w-6 h-6 bg-brand-yellow rounded-full flex items-center justify-center shadow-md"
+          <label
+            htmlFor="avatar-file-input"
+            className="absolute -top-1 -right-1 w-6 h-6 bg-brand-yellow rounded-full flex items-center justify-center shadow-md cursor-pointer"
             title="Change photo"
           >
             <svg viewBox="0 0 20 20" fill="#0c1628" className="w-3.5 h-3.5">
               <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"/>
               <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"/>
             </svg>
-          </button>
+          </label>
         </div>
         <div className="space-y-1">
           {/* Display name + edit */}
@@ -201,7 +205,11 @@ export default function Profile() {
           <div className="text-slate-500 text-xs mt-0.5">{user?.email || 'Not signed in'}</div>
         </div>
         {avatarBase64 && (
-          <button onClick={() => setAvatar(null)}
+          <button
+            onClick={() => {
+              setAvatar(null)
+              api.put('/auth/profile', { avatarBase64: null }).catch(() => {})
+            }}
             className="text-slate-600 hover:text-slate-400 text-xs font-semibold transition-colors -mt-1">
             Remove photo
           </button>
