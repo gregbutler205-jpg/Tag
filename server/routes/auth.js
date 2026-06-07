@@ -95,9 +95,17 @@ router.post('/login', async (req, res, next) => {
 // GET /auth/me — fetch current user's points + states from DB (for cross-device sync)
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
+    // Fetch avatar_base64 in a separate query so a missing column
+    // (SQL migration not yet run) never corrupts points/name data
     const { data: userData } = await supabase
       .from('users')
-      .select('display_name, total_points, avatar_base64')
+      .select('display_name, total_points')
+      .eq('id', req.user.id)
+      .single()
+
+    const { data: avatarRow } = await supabase
+      .from('users')
+      .select('avatar_base64')
       .eq('id', req.user.id)
       .single()
 
@@ -112,7 +120,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
       email:           req.user.email,
       points:          userData?.total_points  || 0,
       statesCollected: states?.map(s => s.state) || [],
-      avatar:          userData?.avatar_base64 || null,
+      avatar:          avatarRow?.avatar_base64 || null,
     })
   } catch (err) { next(err) }
 })

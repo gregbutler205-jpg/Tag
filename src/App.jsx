@@ -50,7 +50,8 @@ export default function App() {
         setUser({ id: data.id, name: data.name, email: data.email })
         setPoints(data.points)
         setStatesCollected(data.statesCollected)
-        setAvatar(data.avatar || null)
+        // Only overwrite local avatar when the server has one — never clear it
+        if (data.avatar) setAvatar(data.avatar)
       })
       .catch(() => {
         // Expired / invalid token — clear it silently
