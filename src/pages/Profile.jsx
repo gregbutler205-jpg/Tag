@@ -6,7 +6,7 @@ import BackButton from '../components/BackButton'
 import api from '../lib/api'
 
 function compressToBase64(file, size = 160) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
     img.onload = () => {
@@ -21,6 +21,10 @@ function compressToBase64(file, size = 160) {
       ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
       URL.revokeObjectURL(url)
       resolve(canvas.toDataURL('image/jpeg', 0.75))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Image could not be read — try a JPG or PNG'))
     }
     img.src = url
   })
@@ -53,6 +57,10 @@ export default function Profile() {
   const initials = user?.name?.slice(0, 2).toUpperCase() || '??'
   const fileRef = useRef(null)
 
+  // Avatar state
+  const [avatarSaving, setAvatarSaving] = useState(false)
+  const [avatarError, setAvatarError]   = useState(null)
+
   // Username edit state
   const [editingName, setEditingName] = useState(false)
   const [newName, setNewName] = useState('')
@@ -63,10 +71,19 @@ export default function Profile() {
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    const b64 = await compressToBase64(file)
-    setAvatar(b64)
-    // Persist to server so avatar syncs across website and PWA
-    api.put('/auth/profile', { avatarBase64: b64 }).catch(() => {})
+    // Reset so the same file can be re-picked after an error
+    if (fileRef.current) fileRef.current.value = ''
+    setAvatarError(null)
+    setAvatarSaving(true)
+    try {
+      const b64 = await compressToBase64(file)
+      setAvatar(b64)
+      await api.put('/auth/profile', { avatarBase64: b64 })
+    } catch (err) {
+      setAvatarError(err.response?.data?.error || err.message || 'Could not save photo')
+    } finally {
+      setAvatarSaving(false)
+    }
   }
 
   function startEditName() {
@@ -204,10 +221,17 @@ export default function Profile() {
           <div className={`text-sm font-semibold ${rank.color}`}>{rank.label}</div>
           <div className="text-slate-500 text-xs mt-0.5">{user?.email || 'Not signed in'}</div>
         </div>
-        {avatarBase64 && (
+        {avatarSaving && (
+          <p className="text-brand-yellow text-xs font-semibold animate-pulse">Saving…</p>
+        )}
+        {avatarError && (
+          <p className="text-red-400 text-xs font-semibold">{avatarError}</p>
+        )}
+        {avatarBase64 && !avatarSaving && (
           <button
             onClick={() => {
               setAvatar(null)
+              setAvatarError(null)
               api.put('/auth/profile', { avatarBase64: null }).catch(() => {})
             }}
             className="text-slate-600 hover:text-slate-400 text-xs font-semibold transition-colors -mt-1">
