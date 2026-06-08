@@ -5,32 +5,21 @@ import { RARITY } from '../lib/rarityConfig'
 import BackButton from '../components/BackButton'
 import api from '../lib/api'
 
-function compressToBase64(file, size = 160) {
-  // Use FileReader → data: URL instead of URL.createObjectURL → blob: URL.
-  // Helmet's default CSP allows img-src data: but blocks blob:, so the
-  // blob approach silently failed (img.onerror) for every image type.
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Could not read the file'))
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onerror = () => reject(new Error('Image could not be decoded'))
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = size
-        canvas.height = size
-        const ctx = canvas.getContext('2d')
-        // Center-crop to square
-        const min = Math.min(img.width, img.height)
-        const sx = (img.width  - min) / 2
-        const sy = (img.height - min) / 2
-        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
-        resolve(canvas.toDataURL('image/jpeg', 0.75))
-      }
-      img.src = e.target.result  // data: URL — allowed by Helmet's img-src policy
-    }
-    reader.readAsDataURL(file)
-  })
+async function compressToBase64(file, size = 160) {
+  // createImageBitmap decodes the File directly in memory — no URL is
+  // created, so img-src CSP never applies. Works for JPG, PNG, WebP, GIF.
+  const bitmap = await createImageBitmap(file)
+  const canvas = document.createElement('canvas')
+  canvas.width  = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  // Center-crop to square
+  const min = Math.min(bitmap.width, bitmap.height)
+  const sx  = (bitmap.width  - min) / 2
+  const sy  = (bitmap.height - min) / 2
+  ctx.drawImage(bitmap, sx, sy, min, min, 0, 0, size, size)
+  bitmap.close()
+  return canvas.toDataURL('image/jpeg', 0.75)
 }
 
 const RANK_TIERS = [
