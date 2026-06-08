@@ -9,7 +9,7 @@ const useStore = create(
       setUser: (user) => set({ user }),
       logout: () => {
         localStorage.removeItem('token')
-        set({ user: null, points: 0, statesCollected: [] })
+        set({ user: null, points: 0, statesCollected: [], avatarBase64: null })
       },
       hasSeenWelcome: false,
       setHasSeenWelcome: (v) => set({ hasSeenWelcome: v }),

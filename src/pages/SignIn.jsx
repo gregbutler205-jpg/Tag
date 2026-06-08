@@ -26,7 +26,7 @@ export default function SignIn() {
       api.get('/auth/me').then(({ data: me }) => {
         setPoints(me.points)
         setStatesCollected(me.statesCollected)
-        if (me.avatar) setAvatar(me.avatar)
+        setAvatar(me.avatar || null)  // always reset on sign-in — new user context
       }).catch(() => {})
       track('sign_in')
       navigate('/')
