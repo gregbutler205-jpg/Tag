@@ -71,8 +71,6 @@ export default function Profile() {
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    // Reset so the same file can be re-picked after an error
-    if (fileRef.current) fileRef.current.value = ''
     setAvatarError(null)
     setAvatarSaving(true)
     try {
@@ -139,9 +137,12 @@ export default function Profile() {
             className="hidden"
             onChange={handleAvatarChange}
           />
-          {/* Avatar circle — label triggers file picker reliably on iOS PWA */}
+          {/* Avatar circle — label triggers file picker reliably on iOS PWA.
+              onClick resets the input value first so picking the same file
+              again always fires onChange (browsers skip it if value unchanged) */}
           <label
             htmlFor="avatar-file-input"
+            onClick={() => { if (fileRef.current) fileRef.current.value = '' }}
             className="relative w-20 h-20 rounded-full mx-auto block overflow-hidden shadow-glow cursor-pointer group"
             title="Tap to change photo"
           >
@@ -164,6 +165,7 @@ export default function Profile() {
           {/* Edit badge */}
           <label
             htmlFor="avatar-file-input"
+            onClick={() => { if (fileRef.current) fileRef.current.value = '' }}
             className="absolute -top-1 -right-1 w-6 h-6 bg-brand-yellow rounded-full flex items-center justify-center shadow-md cursor-pointer"
             title="Change photo"
           >
