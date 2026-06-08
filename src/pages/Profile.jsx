@@ -6,27 +6,30 @@ import BackButton from '../components/BackButton'
 import api from '../lib/api'
 
 function compressToBase64(file, size = 160) {
+  // Use FileReader → data: URL instead of URL.createObjectURL → blob: URL.
+  // Helmet's default CSP allows img-src data: but blocks blob:, so the
+  // blob approach silently failed (img.onerror) for every image type.
   return new Promise((resolve, reject) => {
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = size
-      canvas.height = size
-      const ctx = canvas.getContext('2d')
-      // Center-crop to square
-      const min = Math.min(img.width, img.height)
-      const sx = (img.width  - min) / 2
-      const sy = (img.height - min) / 2
-      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
-      URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', 0.75))
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Could not read the file'))
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('Image could not be decoded'))
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext('2d')
+        // Center-crop to square
+        const min = Math.min(img.width, img.height)
+        const sx = (img.width  - min) / 2
+        const sy = (img.height - min) / 2
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
+        resolve(canvas.toDataURL('image/jpeg', 0.75))
+      }
+      img.src = e.target.result  // data: URL — allowed by Helmet's img-src policy
     }
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('Image could not be read — try a JPG or PNG'))
-    }
-    img.src = url
+    reader.readAsDataURL(file)
   })
 }
 
