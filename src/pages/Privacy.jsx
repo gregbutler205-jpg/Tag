@@ -65,7 +65,7 @@ export default function Privacy() {
       <Section title="3. How We Share Your Information">
         <P>We do not sell, rent, or trade your information. We share limited data only with these service providers:</P>
         <ul className="list-disc pl-5 space-y-2">
-          <Li><span className="text-white font-semibold">xAI (Grok)</span> — receives plate text for AI interpretation. No personal data shared.</Li>
+          <Li><span className="text-white font-semibold">AI service providers</span> — receive plate text for interpretation. No personal data shared.</Li>
           <Li><span className="text-white font-semibold">OpenAI</span> — receives plate photos for OCR text extraction. No personal data shared.</Li>
           <Li><span className="text-white font-semibold">Supabase</span> — hosts our database.</Li>
           <Li><span className="text-white font-semibold">Render</span> — hosts our application server.</Li>
