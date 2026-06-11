@@ -705,8 +705,8 @@ export default function Submit() {
             </div>
           )}
 
-          {/* Challenge input — hide after a verdict */}
-          {!challenge && (
+          {/* Challenge input — hide after a verdict and for unclear plates */}
+          {!challenge && result?.category !== 'unclear' && (
             <div className="glass-card rounded-2xl p-4 space-y-3">
               <p className="text-slate-400 text-sm font-semibold">
                 🧙 Can You Beat The Wizard? Cast your spell:

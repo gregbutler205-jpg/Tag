@@ -407,6 +407,11 @@ export async function moderatePlate(plateText) {
  *   { verdict: 'agree'|'partial'|'disagree', reasoning: string, bonusPoints: number, revisedMeaning: string|null }
  */
 export async function challengeInterpretation(plateText, aiMeaning, userMeaning, context = {}) {
+  // If the AI couldn't read the plate, there's nothing to judge against
+  if (!aiMeaning || aiMeaning === 'Meaning unclear') {
+    return { verdict: 'partial', reasoning: "The Wizard couldn't pin down a single meaning — your interpretation is as valid as any!", revisedMeaning: userMeaning, bonusPoints: 35 }
+  }
+
   const systemMsg = `You are a fair judge of US vanity license plate interpretations.
 You will be given a plate, the AI's interpretation, and a user's own interpretation.
 
