@@ -407,12 +407,30 @@ export async function moderatePlate(plateText) {
  *   { verdict: 'agree'|'partial'|'disagree', reasoning: string, bonusPoints: number, revisedMeaning: string|null }
  */
 export async function challengeInterpretation(plateText, aiMeaning, userMeaning, context = {}) {
-  // If the AI couldn't read the plate, there's nothing to judge against
-  if (!aiMeaning || aiMeaning === 'Meaning unclear') {
-    return { verdict: 'partial', reasoning: "The Wizard couldn't pin down a single meaning — your interpretation is as valid as any!", revisedMeaning: userMeaning, bonusPoints: 35 }
-  }
+  const isUnclear = !aiMeaning || aiMeaning === 'Meaning unclear'
 
-  const systemMsg = `You are a fair judge of US vanity license plate interpretations.
+  // When the AI had no answer, judge the user's reading directly against the plate.
+  // When the AI did have an answer, judge whether the user's reading is at least as good.
+  const systemMsg = isUnclear
+    ? `You are a judge evaluating a user's interpretation of a US vanity license plate.
+The AI could not determine a clear meaning, so judge the user's reading entirely on its own merits.
+
+Your job:
+1. Decide whether the user's interpretation is plausible and well-supported by the characters.
+2. Be fair — reward readings that are genuinely supported; don't give credit for wild guesses.
+3. Never endorse crude, vulgar, or offensive meanings.
+4. Return ONLY valid JSON using this exact shape:
+{
+  "verdict": "agree" | "partial" | "disagree",
+  "reasoning": "one or two plain-English sentences explaining your verdict",
+  "revised_meaning": "string or null — best reading if agree/partial, otherwise null"
+}
+
+Verdict guidance:
+- "agree"    — clearly plausible; the characters strongly support this reading
+- "partial"  — has some merit but not the most obvious or fully supported reading
+- "disagree" — not well-supported by the plate characters; implausible or a stretch`
+    : `You are a fair judge of US vanity license plate interpretations.
 You will be given a plate, the AI's interpretation, and a user's own interpretation.
 
 Your job:
@@ -431,7 +449,11 @@ Verdict guidance:
 - "partial"  — user's reading has merit but is less certain or complementary; award half bonus
 - "disagree" — user's reading is not well-supported by the characters or is implausible`
 
-  const userMsg = `Plate: ${plateText}
+  const userMsg = isUnclear
+    ? `Plate: ${plateText}
+State: ${context.state || 'unknown'}
+User interpretation: ${userMeaning}`
+    : `Plate: ${plateText}
 State: ${context.state || 'unknown'}
 AI interpretation: ${aiMeaning}
 User interpretation: ${userMeaning}`
