@@ -303,8 +303,10 @@ export default function Submit() {
       setChallenge(data)
       if (data.bonusPoints > 0) addPoints(data.bonusPoints)
       track('challenge_submitted', { verdict: data.verdict, bonus_points: data.bonusPoints })
-    } catch {
-      setChallenge({ verdict: 'disagree', reasoning: 'Could not reach the judge — try again.', bonusPoints: 0 })
+    } catch (e) {
+      const msg = e.response?.data?.error || 'Could not reach the judge — try again.'
+      const isContentFlag = e.response?.status === 422
+      setChallenge({ verdict: 'disagree', reasoning: msg, contentDeclined: isContentFlag, bonusPoints: 0 })
     } finally {
       setChallenging(false)
     }
@@ -680,19 +682,26 @@ export default function Submit() {
                 ? 'bg-emerald-900/30 border-emerald-600/50'
                 : challenge.verdict === 'partial'
                 ? 'bg-amber-900/30 border-amber-600/50'
+                : challenge.contentDeclined
+                ? 'bg-orange-900/30 border-orange-600/50'
                 : 'bg-slate-800/60 border-slate-600/40'
             }`}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xl">
-                  {challenge.verdict === 'agree' ? '🎉' : challenge.verdict === 'partial' ? '🤔' : '❌'}
+                  {challenge.verdict === 'agree' ? '🎉'
+                   : challenge.verdict === 'partial' ? '🤔'
+                   : challenge.contentDeclined ? '🚫'
+                   : '❌'}
                 </span>
                 <span className={`font-black text-sm uppercase tracking-wide ${
-                  challenge.verdict === 'agree'   ? 'text-emerald-400'
+                  challenge.verdict === 'agree'     ? 'text-emerald-400'
                   : challenge.verdict === 'partial' ? 'text-amber-400'
+                  : challenge.contentDeclined       ? 'text-orange-400'
                   : 'text-slate-400'
                 }`}>
-                  {challenge.verdict === 'agree'   ? `You're right! +${challenge.bonusPoints} pts`
+                  {challenge.verdict === 'agree'    ? `You're right! +${challenge.bonusPoints} pts`
                    : challenge.verdict === 'partial' ? `Partial credit! +${challenge.bonusPoints} pts`
+                   : challenge.contentDeclined       ? 'Content policy'
                    : 'Not quite'}
                 </span>
               </div>

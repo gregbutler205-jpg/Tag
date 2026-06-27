@@ -436,13 +436,16 @@ Your job:
 {
   "verdict": "agree" | "partial" | "disagree",
   "reasoning": "one or two plain-English sentences explaining your verdict",
-  "revised_meaning": "string or null — best reading if agree/partial, otherwise null"
+  "revised_meaning": "string or null — best reading if agree/partial, otherwise null",
+  "content_declined": false
 }
 
 Verdict guidance:
 - "agree"    — clearly plausible; the characters strongly support this reading
 - "partial"  — has some merit but not the most obvious or fully supported reading
-- "disagree" — not well-supported by the plate characters; implausible or a stretch`
+- "disagree" — not well-supported by the plate characters; implausible or a stretch
+
+Set "content_declined": true ONLY when declining because the user's interpretation is crude, offensive, racially charged, or violates content policy. Leave it false for all other disagree cases.`
     : `You are a fair judge of US vanity license plate interpretations.
 You will be given a plate, the AI's interpretation, and a user's own interpretation.
 
@@ -454,13 +457,16 @@ Your job:
 {
   "verdict": "agree" | "partial" | "disagree",
   "reasoning": "one or two plain-English sentences explaining your verdict",
-  "revised_meaning": "string or null — if you agree or partially agree, return the best combined meaning; otherwise null"
+  "revised_meaning": "string or null — if you agree or partially agree, return the best combined meaning; otherwise null",
+  "content_declined": false
 }
 
 Verdict guidance:
 - "agree"    — user's reading is clearly plausible and at least as good as the AI's; award full bonus
 - "partial"  — user's reading has merit but is less certain or complementary; award half bonus
-- "disagree" — user's reading is not well-supported by the characters or is implausible`
+- "disagree" — user's reading is not well-supported by the characters or is implausible
+
+Set "content_declined": true ONLY when declining because the user's interpretation is crude, offensive, racially charged, or violates content policy. Leave it false for all other disagree cases.`
 
   const userMsg = isUnclear
     ? `Plate: ${plateText}
@@ -509,8 +515,9 @@ User interpretation: ${userMeaning}`
 
   return {
     verdict,
-    reasoning:      raw.reasoning      || '',
-    revisedMeaning: raw.revised_meaning || null,
+    reasoning:        raw.reasoning       || '',
+    revisedMeaning:   raw.revised_meaning || null,
+    contentDeclined:  raw.content_declined === true,
     bonusPoints,
   }
 }
