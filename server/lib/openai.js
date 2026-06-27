@@ -239,7 +239,15 @@ function buildFallback(plateText) {
 function safeParseJSON(raw, plateText) {
   try {
     const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
-    const parsed  = JSON.parse(cleaned)
+    let parsed
+    try {
+      parsed = JSON.parse(cleaned)
+    } catch {
+      // Model sometimes outputs thinking prose before the JSON — extract the last {...} block
+      const match = raw.match(/\{[\s\S]*\}/g)
+      if (match) parsed = JSON.parse(match[match.length - 1])
+      else throw new Error('No JSON object found in response')
+    }
 
     // Require the two most important fields
     if (typeof parsed.most_likely_meaning !== 'string' || typeof parsed.confidence !== 'number') {
@@ -285,16 +293,17 @@ const POINT_MULTIPLIERS = { common: 1, uncommon: 1.5, rare: 2, epic: 3, legendar
 export async function interpretPlate(plateText, context = {}) {
   const messages = buildMessages(plateText, context)
 
+  const jsonMode = { response_format: { type: 'json_object' } }
   let rawContent
   try {
     const response = await getFireworksClient().chat.completions.create({
-      model: PRIMARY_MODEL, messages, temperature: 0.2, max_tokens: 400,
+      model: PRIMARY_MODEL, messages, temperature: 0.2, max_tokens: 600, ...jsonMode,
     })
     rawContent = response.choices[0].message.content
   } catch (err) {
     console.warn('[interpretPlate] Fireworks failed, falling back to Grok-3:', err.message)
     const response = await getGrokClient().chat.completions.create({
-      model: FALLBACK_MODEL, messages, temperature: 0.2, max_tokens: 400,
+      model: FALLBACK_MODEL, messages, temperature: 0.2, max_tokens: 600, ...jsonMode,
     })
     rawContent = response.choices[0].message.content
   }
@@ -465,11 +474,12 @@ User interpretation: ${userMeaning}`
   let raw
   try {
     let content
+    const challengeJsonMode = { response_format: { type: 'json_object' } }
     try {
       const response = await getFireworksClient().chat.completions.create({
         model: PRIMARY_MODEL,
         messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
-        temperature: 0.2, max_tokens: 200,
+        temperature: 0.2, max_tokens: 400, ...challengeJsonMode,
       })
       content = response.choices[0].message.content
     } catch (err) {
@@ -477,7 +487,7 @@ User interpretation: ${userMeaning}`
       const response = await getGrokClient().chat.completions.create({
         model: FALLBACK_MODEL,
         messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
-        temperature: 0.2, max_tokens: 200,
+        temperature: 0.2, max_tokens: 400, ...challengeJsonMode,
       })
       content = response.choices[0].message.content
     }
