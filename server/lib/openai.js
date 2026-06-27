@@ -63,7 +63,7 @@ Return exactly one JSON object. No text, no markdown fences, no commentary outsi
 
 Field rules:
 - plate: exact plate text as received
-- most_likely_meaning: best clean reading, or "Meaning unclear" when nothing strong exists
+- most_likely_meaning: best clean reading even when multiple are equally plausible — pick the strongest and put the rest in alternatives; use "Meaning unclear" ONLY when no reading can be constructed at all (random string, private initialism with zero phonetic anchor)
 - confidence: integer 0–100
 - category: exactly one value from the Category Taxonomy below
 - why: one sentence citing the substitution, BAAC code, or method used
@@ -83,7 +83,7 @@ Prefer the most socially plausible intended meaning — identity, humor, status,
 Spaces and vowels are optional — reconstruct likely word boundaries and missing vowels before judging.
 Numbers are syllables first — 8 = "ate" before it is the digit eight; 2 = "to/too" before the number.
 Context is supporting, never overriding — vehicle make, state, or specialty-plate design nudges confidence; it cannot manufacture meaning the characters don't support.
-Don't force it — if no clean reading is strong, return unclear at low confidence.
+Don't force it — when multiple readings are plausible, pick the most likely and list the rest as alternatives; return "Meaning unclear" only when nothing at all can be constructed from the characters (e.g., QRTZN — no phonetic anchor, no cultural match, no name fit).
 Names beat phrases when names fit — first name, last name, nickname, or initials outranks a forced phrase.
 Foreign-language and classical phrases are fair game — Latin, Spanish, French, Italian. Recognize them; don't force them.
 Health/survival, faith, and family readings outrank harsh literal readings — NWLIVER = new liver, not an insult.
@@ -128,9 +128,9 @@ name | family | hobby | profession | sports-fan | faith | military | health-surv
 90–100: obvious, unambiguous, strong phonetic pattern, context confirms
 75–89: clear single reading with one minor ambiguity or moderate cultural knowledge needed
 55–74: best reading exists but a real alternative is also plausible — list it
-40–54: required several assumptions or vowel restorations
-20–39: no strong clean reading — return "Meaning unclear", category unclear
-0–19: private code, random string, unrecoverable
+40–54: multiple roughly equally plausible readings — pick the strongest, list the rest as alternatives
+20–39: weak or partial fit, heavy assumptions required — pick the best available reading, list alternatives; "Meaning unclear" only if truly nothing can be constructed at all
+0–19: private initialism, random string, no phonetic or semantic anchor — return "Meaning unclear"
 
 Anchors: GR8DAY=95 | LV2RUN=93 | K8=90 | JP4X4(Jeep)=91 | EVLVR(Tesla)=88 | XNTHILO=86 | W8=84 | NWLIVER=83 | NWYMN=70 | QRTZN=22`
 
@@ -190,6 +190,10 @@ const EXAMPLES = [
   {
     plateText: 'W8', ctx: {},
     output: { plate: 'W8', most_likely_meaning: 'Wait', confidence: 84, category: 'humor', why: "8 supplies the 'ate' sound, making the plate read as 'wait'.", alternatives: [], vehicle_context: { make: null, model: null, type: null, used_in_interpretation: false, effect_on_confidence: 'none' } },
+  },
+  {
+    plateText: 'C2CB2B', ctx: {},
+    output: { plate: 'C2CB2B', most_likely_meaning: 'Coast to Coast, Border to Border', confidence: 47, category: 'geographic', why: "C=coast/sea, 2=to, C=coast/sea, B=border, 2=to, B=border. Multiple equally plausible readings — most geographic/popular chosen as primary.", alternatives: ['Consumer to Consumer, Business to Business', 'Sea to Sea, Border to Border'], vehicle_context: { make: null, model: null, type: null, used_in_interpretation: false, effect_on_confidence: 'none' } },
   },
   {
     plateText: 'QRTZN', ctx: {},
@@ -478,7 +482,14 @@ User interpretation: ${userMeaning}`
       content = response.choices[0].message.content
     }
     const cleaned = content.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
-    raw = JSON.parse(cleaned)
+    let parsed = null
+    try { parsed = JSON.parse(cleaned) } catch {}
+    if (!parsed) {
+      // AI sometimes wraps JSON in prose — extract the first {...} block
+      const match = content.match(/\{[\s\S]*\}/)
+      if (match) try { parsed = JSON.parse(match[0]) } catch {}
+    }
+    raw = parsed || { verdict: 'disagree', reasoning: 'Could not evaluate the interpretation.', revised_meaning: null }
   } catch {
     raw = { verdict: 'disagree', reasoning: 'Could not evaluate the interpretation.', revised_meaning: null }
   }
