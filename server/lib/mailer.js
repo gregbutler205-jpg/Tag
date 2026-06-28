@@ -6,8 +6,16 @@ function getTransporter() {
   if (_transporter) return _transporter
   const user = (process.env.ADMIN_EMAILS || '').split(',')[0].trim()
   const pass = process.env.GMAIL_APP_PASSWORD
-  if (!user || !pass) return null
-  _transporter = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } })
+  if (!user || !pass) {
+    console.warn('[mailer] ADMIN_EMAILS or GMAIL_APP_PASSWORD not set — email disabled')
+    return null
+  }
+  _transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: { user, pass },
+  })
   return _transporter
 }
 
@@ -17,6 +25,7 @@ export async function sendTrainingNotification(pendingCount) {
   const to = process.env.ADMIN_EMAILS || ''
   if (!to) return
   const from = to.split(',')[0].trim()
+  console.log(`[mailer] Sending training notification to ${to}`)
   try {
     await transport.sendMail({
       from: `"Tag Wizard" <${from}>`,

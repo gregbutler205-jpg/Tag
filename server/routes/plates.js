@@ -66,7 +66,8 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
       try {
         const { count } = await supabase
           .from('training_data').select('*', { count: 'exact', head: true }).eq('status', 'pending')
-        await supabase.from('training_data').upsert({
+        const wasEmpty = (count ?? 0) === 0
+        const { error: tdErr } = await supabase.from('training_data').upsert({
           plate_text:    plateUpper,
           state:         state || null,
           ai_meaning:    result.primary,
@@ -76,7 +77,8 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
           status:        'pending',
           submitted_by:  req.user?.id || null,
         }, { onConflict: 'plate_text', ignoreDuplicates: true })
-        if (count === 0) await sendTrainingNotification(1)
+        if (tdErr) console.warn('[training/decode] upsert error:', tdErr.message)
+        if (wasEmpty) await sendTrainingNotification(1)
       } catch (e) { console.warn('[training/decode]', e.message) }
     })()
 
