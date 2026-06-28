@@ -11,14 +11,10 @@ services:
         value: production
       - key: OPENAI_API_KEY
         sync: false
-      - key: XAI_API_KEY
-        sync: false
       - key: FIREWORKS_API_KEY
         sync: false
       - key: FIREWORKS_MODEL
         value: accounts/fireworks/models/deepseek-v4-flash
-      - key: FALLBACK_MODEL
-        value: grok-3
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_KEY

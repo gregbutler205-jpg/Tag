@@ -20,18 +20,7 @@ function getFireworksClient() {
   return _fireworksClient
 }
 
-// ── Grok client (fallback — Grok-3) ──────────────────────────────────────────
-let _grokClient = null
-function getGrokClient() {
-  if (!_grokClient) {
-    if (!process.env.XAI_API_KEY) throw new Error('XAI_API_KEY is not set in server/.env')
-    _grokClient = new OpenAI({ apiKey: process.env.XAI_API_KEY, baseURL: 'https://api.x.ai/v1' })
-  }
-  return _grokClient
-}
-
-const PRIMARY_MODEL  = process.env.FIREWORKS_MODEL  || 'accounts/fireworks/models/deepseek-v4-flash'
-const FALLBACK_MODEL = process.env.FALLBACK_MODEL   || 'grok-3'
+const PRIMARY_MODEL = process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/deepseek-v4-flash'
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are an expert interpreter of US vanity license plates for Tag Wizard, a plate-decoding game.
@@ -294,19 +283,10 @@ export async function interpretPlate(plateText, context = {}) {
   const messages = buildMessages(plateText, context)
 
   const jsonMode = { response_format: { type: 'json_object' } }
-  let rawContent
-  try {
-    const response = await getFireworksClient().chat.completions.create({
-      model: PRIMARY_MODEL, messages, temperature: 0.2, max_tokens: 600, ...jsonMode,
-    })
-    rawContent = response.choices[0].message.content
-  } catch (err) {
-    console.warn('[interpretPlate] Fireworks failed, falling back to Grok-3:', err.message)
-    const response = await getGrokClient().chat.completions.create({
-      model: FALLBACK_MODEL, messages, temperature: 0.2, max_tokens: 600, ...jsonMode,
-    })
-    rawContent = response.choices[0].message.content
-  }
+  const response = await getFireworksClient().chat.completions.create({
+    model: PRIMARY_MODEL, messages, temperature: 0.2, max_tokens: 1500, ...jsonMode,
+  })
+  const rawContent = response.choices[0].message.content
 
   const raw        = safeParseJSON(rawContent, plateText)
   const confidence = Math.max(0, Math.min(100, raw.confidence))
@@ -368,21 +348,11 @@ ${guessList}`
 
   let raw
   try {
-    let content
-    try {
-      const response = await getFireworksClient().chat.completions.create({
-        model: PRIMARY_MODEL, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
-        temperature: 0.2, max_tokens: 400,
-      })
-      content = response.choices[0].message.content
-    } catch (err) {
-      console.warn('[scoreGroupGuesses] Fireworks failed, falling back to Grok-3:', err.message)
-      const response = await getGrokClient().chat.completions.create({
-        model: FALLBACK_MODEL, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
-        temperature: 0.2, max_tokens: 400,
-      })
-      content = response.choices[0].message.content
-    }
+    const { choices } = await getFireworksClient().chat.completions.create({
+      model: PRIMARY_MODEL, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+      temperature: 0.2, max_tokens: 400,
+    })
+    const content = choices[0].message.content
     const cleaned = content.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     raw = JSON.parse(cleaned)
   } catch {
@@ -481,22 +451,12 @@ User interpretation: ${userMeaning}`
   try {
     let content
     const challengeJsonMode = { response_format: { type: 'json_object' } }
-    try {
-      const response = await getFireworksClient().chat.completions.create({
-        model: PRIMARY_MODEL,
-        messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
-        temperature: 0.2, max_tokens: 400, ...challengeJsonMode,
-      })
-      content = response.choices[0].message.content
-    } catch (err) {
-      console.warn('[challengeInterpretation] Fireworks failed, falling back to Grok-3:', err.message)
-      const response = await getGrokClient().chat.completions.create({
-        model: FALLBACK_MODEL,
-        messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
-        temperature: 0.2, max_tokens: 400, ...challengeJsonMode,
-      })
-      content = response.choices[0].message.content
-    }
+    const { choices } = await getFireworksClient().chat.completions.create({
+      model: PRIMARY_MODEL,
+      messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: userMsg }],
+      temperature: 0.2, max_tokens: 1000, ...challengeJsonMode,
+    })
+    content = choices[0].message.content
     const cleaned = content.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     let parsed = null
     try { parsed = JSON.parse(cleaned) } catch {}
