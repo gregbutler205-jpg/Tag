@@ -6,6 +6,7 @@ import { detectPlateVision } from '../lib/visionPipeline.js'
 import { extractPlateText } from '../lib/ocr.js'
 import { optionalAuth } from '../lib/auth.js'
 import supabase from '../lib/supabase.js'
+import { sendTrainingNotification } from '../lib/mailer.js'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
@@ -60,6 +61,25 @@ router.post('/interpret', optionalAuth, async (req, res, next) => {
       }
     }
 
+    // ── Capture to training dataset ──────────────────────────────────────────
+    ;(async () => {
+      try {
+        const { count } = await supabase
+          .from('training_data').select('*', { count: 'exact', head: true }).eq('status', 'pending')
+        await supabase.from('training_data').upsert({
+          plate_text:    plateUpper,
+          state:         state || null,
+          ai_meaning:    result.primary,
+          ai_confidence: Math.round(result.confidence * 100),
+          final_meaning: result.primary,
+          source:        'ai_decode',
+          status:        'pending',
+          submitted_by:  req.user?.id || null,
+        }, { onConflict: 'plate_text', ignoreDuplicates: true })
+        if (count === 0) await sendTrainingNotification(1)
+      } catch (e) { console.warn('[training/decode]', e.message) }
+    })()
+
     // ── Auto-queue to daily pool based on AI confidence ─────────────────────
     // ≥ 85%  → approved automatically, goes live in Daily Tag rotation
     // 75–84% → pending, requires admin approval before going live
@@ -107,6 +127,25 @@ router.post('/challenge', optionalAuth, async (req, res, next) => {
         p_points:  judgment.bonusPoints,
       })
       if (rpcErr) console.warn('[add_points rpc]', rpcErr.message)
+    }
+
+    // ── Update training dataset with user's interpretation ────────────────────
+    if (judgment.verdict === 'agree' || judgment.verdict === 'partial') {
+      ;(async () => {
+        try {
+          await supabase.from('training_data').upsert({
+            plate_text:    plateText.toUpperCase().replace(/[^A-Z0-9 -]/g, ''),
+            state:         state || null,
+            ai_meaning:    aiMeaning,
+            user_meaning:  userMeaning.trim(),
+            verdict:       judgment.verdict,
+            final_meaning: judgment.revisedMeaning || aiMeaning,
+            source:        'user_challenge',
+            status:        'pending',
+            submitted_by:  req.user?.id || null,
+          }, { onConflict: 'plate_text' })
+        } catch (e) { console.warn('[training/challenge]', e.message) }
+      })()
     }
 
     // Auto-queue to daily pool if user and AI agree (85%+ match = 'agree' verdict)

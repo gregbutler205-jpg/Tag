@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../lib/auth.js'
 import supabase from '../lib/supabase.js'
+import { sendTrainingNotification } from '../lib/mailer.js'
 
 const router = Router()
 
@@ -185,6 +186,83 @@ router.delete('/feedback/:id', requireAuth, requireAdmin, async (req, res, next)
   try {
     await supabase.from('feedback').delete().eq('id', req.params.id)
     res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
+// ── Training Dataset ──────────────────────────────────────────────────────────
+
+// GET /admin/training — pending items, user-challenged first
+router.get('/training', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const status = req.query.status || 'pending'
+    const { data } = await supabase
+      .from('training_data')
+      .select('*')
+      .eq('status', status)
+      .order('source', { ascending: false })  // user_challenge before ai_decode
+      .order('created_at', { ascending: true })
+      .limit(200)
+    res.json(data || [])
+  } catch (err) { next(err) }
+})
+
+// GET /admin/training/counts — pending/approved/rejected counts
+router.get('/training/counts', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const [pending, approved, rejected] = await Promise.all([
+      supabase.from('training_data').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('training_data').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+      supabase.from('training_data').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
+    ])
+    res.json({ pending: pending.count || 0, approved: approved.count || 0, rejected: rejected.count || 0 })
+  } catch (err) { next(err) }
+})
+
+// POST /admin/training/:id/approve
+router.post('/training/:id/approve', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const { finalMeaning } = req.body
+    const updates = { status: 'approved', reviewed_at: new Date().toISOString() }
+    if (finalMeaning?.trim()) updates.final_meaning = finalMeaning.trim()
+    await supabase.from('training_data').update(updates).eq('id', req.params.id)
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
+// POST /admin/training/:id/reject
+router.post('/training/:id/reject', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    await supabase.from('training_data')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
+// GET /admin/training/export — download approved items as JSONL for fine-tuning
+router.get('/training/export', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const { data } = await supabase
+      .from('training_data')
+      .select('plate_text, state, ai_meaning, ai_confidence, user_meaning, verdict, final_meaning, source, created_at')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: true })
+
+    const lines = (data || []).map(row => JSON.stringify({
+      messages: [
+        { role: 'system', content: 'You are an expert interpreter of US vanity license plates. Return only valid JSON.' },
+        { role: 'user',   content: `Plate: ${row.plate_text}\nState: ${row.state || 'unknown'}` },
+        { role: 'assistant', content: JSON.stringify({
+          most_likely_meaning: row.final_meaning,
+          confidence: row.ai_confidence,
+          source_note: row.source,
+        }) },
+      ],
+    }))
+
+    res.setHeader('Content-Type', 'application/x-ndjson')
+    res.setHeader('Content-Disposition', `attachment; filename="tag-wizard-training-${new Date().toISOString().slice(0,10)}.jsonl"`)
+    res.send(lines.join('\n'))
   } catch (err) { next(err) }
 })
 

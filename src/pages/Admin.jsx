@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import api from '../lib/api'
 
-const TABS = ['Pending', 'Pool', 'Plates', 'Users', 'Groups', 'Feedback']
+const TABS = ['Pending', 'Pool', 'Plates', 'Users', 'Groups', 'Feedback', 'Training']
 
 const STATUS_BADGE = {
   approved: 'bg-emerald-800/60 text-emerald-300 border border-emerald-700/50',
@@ -57,8 +57,17 @@ export default function Admin() {
   const [actionLoading, setActionLoading] = useState({})
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
+  const [trainingCounts, setTrainingCounts] = useState({ pending: 0, approved: 0, rejected: 0 })
+  const [trainingStatus, setTrainingStatus] = useState('pending')
+  const [trainingEdit, setTrainingEdit] = useState({})  // id → edited final_meaning
 
-  useEffect(() => { loadData() }, [activeTab])
+  useEffect(() => { loadData() }, [activeTab, trainingStatus])
+
+  useEffect(() => {
+    if (activeTab === 'Training') {
+      api.get('/admin/training/counts').then(r => setTrainingCounts(r.data)).catch(() => {})
+    }
+  }, [activeTab, data])
 
   const ENDPOINT = {
     'Pending':  '/admin/pending',
@@ -67,6 +76,7 @@ export default function Admin() {
     'Users':    '/admin/users-list',
     'Groups':   '/admin/groups-list',
     'Feedback': '/admin/feedback-list',
+    'Training': `/admin/training?status=${trainingStatus}`,
   }
 
   async function loadData() {
@@ -186,6 +196,11 @@ export default function Admin() {
             {tab === 'Pending' && pendingCount > 0 && !loading && (
               <span className="ml-1.5 bg-brand-yellow text-navy-900 text-xs font-black px-1.5 py-0.5 rounded-full">
                 {pendingCount}
+              </span>
+            )}
+            {tab === 'Training' && trainingCounts.pending > 0 && (
+              <span className="ml-1.5 bg-purple-500 text-white text-xs font-black px-1.5 py-0.5 rounded-full">
+                {trainingCounts.pending}
               </span>
             )}
           </button>
@@ -495,6 +510,120 @@ export default function Admin() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ── TRAINING ────────────────────────────────────────────────── */}
+          {activeTab === 'Training' && (
+            <div className="space-y-3">
+              {/* Status filter + counts + export */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {['pending', 'approved', 'rejected'].map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setTrainingStatus(s)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors capitalize ${
+                      trainingStatus === s
+                        ? 'bg-brand-blue text-white'
+                        : 'bg-navy-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {s} ({trainingCounts[s] ?? 0})
+                  </button>
+                ))}
+                <a
+                  href="/admin/training/export"
+                  className="ml-auto px-3 py-1.5 rounded-lg bg-purple-900/60 hover:bg-purple-800/60 text-purple-300 text-xs font-bold border border-purple-700/50 transition-colors"
+                >
+                  ⬇ Export JSONL
+                </a>
+              </div>
+
+              {data.length === 0 ? (
+                <Empty emoji="🎓" text={`No ${trainingStatus} training items.`} />
+              ) : data.map(row => (
+                <div key={row.id} className="glass-card rounded-2xl p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-white font-black tracking-wider">{row.plate_text}</span>
+                        {row.state && <span className="text-xs bg-navy-700 text-slate-400 px-2 py-0.5 rounded-full">{row.state}</span>}
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          row.source === 'user_challenge'
+                            ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/50'
+                            : 'bg-blue-900/60 text-blue-300 border border-blue-700/50'
+                        }`}>
+                          {row.source === 'user_challenge' ? '👤 User validated' : '🤖 AI decode'}
+                        </span>
+                        {row.verdict && (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            row.verdict === 'agree'   ? 'bg-emerald-900/60 text-emerald-300' :
+                            row.verdict === 'partial' ? 'bg-amber-900/60 text-amber-300' : 'bg-slate-700 text-slate-400'
+                          }`}>
+                            {row.verdict}
+                          </span>
+                        )}
+                        <span className="text-xs text-slate-600">{row.ai_confidence}% confidence</span>
+                      </div>
+
+                      <p className="text-slate-300 text-sm">
+                        <span className="text-slate-500 text-xs">AI: </span>{row.ai_meaning}
+                      </p>
+                      {row.user_meaning && (
+                        <p className="text-slate-300 text-sm">
+                          <span className="text-slate-500 text-xs">User: </span>{row.user_meaning}
+                        </p>
+                      )}
+
+                      {/* Editable final meaning */}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-slate-500 text-xs shrink-0">Final:</span>
+                        <input
+                          value={trainingEdit[row.id] ?? row.final_meaning ?? ''}
+                          onChange={e => setTrainingEdit(prev => ({ ...prev, [row.id]: e.target.value }))}
+                          className="flex-1 bg-navy-800 border border-navy-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-brand-blue/50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {trainingStatus === 'pending' && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          setActionLoading(prev => ({ ...prev, [row.id]: true }))
+                          try {
+                            await api.post(`/admin/training/${row.id}/approve`, { finalMeaning: trainingEdit[row.id] })
+                            setData(prev => prev.filter(r => r.id !== row.id))
+                            setTrainingCounts(c => ({ ...c, pending: c.pending - 1, approved: c.approved + 1 }))
+                          } catch { alert('Approve failed') }
+                          finally { setActionLoading(prev => ({ ...prev, [row.id]: false })) }
+                        }}
+                        disabled={!!actionLoading[row.id]}
+                        className="flex-1 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                      >
+                        {actionLoading[row.id] ? '...' : '✅ Approve'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setActionLoading(prev => ({ ...prev, [row.id]: true }))
+                          try {
+                            await api.post(`/admin/training/${row.id}/reject`)
+                            setData(prev => prev.filter(r => r.id !== row.id))
+                            setTrainingCounts(c => ({ ...c, pending: c.pending - 1, rejected: c.rejected + 1 }))
+                          } catch { alert('Reject failed') }
+                          finally { setActionLoading(prev => ({ ...prev, [row.id]: false })) }
+                        }}
+                        disabled={!!actionLoading[row.id]}
+                        className="flex-1 py-2 rounded-xl bg-red-900 hover:bg-red-800 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                      >
+                        {actionLoading[row.id] ? '...' : '❌ Reject'}
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-slate-600 text-xs">{new Date(row.created_at).toLocaleString()}</p>
+                </div>
+              ))}
             </div>
           )}
 
