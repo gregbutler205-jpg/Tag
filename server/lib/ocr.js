@@ -212,9 +212,19 @@ export async function extractPlateText(imageBuffer) {
     }
   )
 
-  if (!response.ok) throw new Error('Vision API error')
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    throw new Error(`Vision API HTTP ${response.status}: ${body.slice(0, 200)}`)
+  }
 
   const data = await response.json()
+
+  // Vision API can return 200 with a per-request error object
+  const apiErr = data.responses?.[0]?.error
+  if (apiErr) {
+    throw new Error(`Vision API error ${apiErr.code}: ${apiErr.message}`)
+  }
+
   const annotations = data.responses?.[0]?.textAnnotations
   if (!annotations?.length) return { plateText: null, detectedState: null }
 
