@@ -16,6 +16,8 @@ router.get('/', optionalAuth, async (req, res, next) => {
   try {
     const today = getTodayStr()
 
+    // ── Determine which plate to show ────────────────────────────────────────
+
     // Check for a manually curated daily_challenges override first
     const { data: dbDaily } = await supabase
       .from('daily_challenges')
@@ -23,17 +25,8 @@ router.get('/', optionalAuth, async (req, res, next) => {
       .eq('date', today)
       .single()
 
-    if (dbDaily) {
-      return res.json({
-        id: dbDaily.id,
-        plate: dbDaily.plates.text,
-        state: dbDaily.plates.state,
-        date: today,
-      })
-    }
-
     // If a plate was already selected today, keep showing it (daily consistency lock)
-    const { data: alreadyToday } = await supabase
+    const { data: alreadyToday } = dbDaily ? { data: null } : await supabase
       .from('daily_pool')
       .select('*')
       .eq('status', 'approved')
@@ -42,9 +35,9 @@ router.get('/', optionalAuth, async (req, res, next) => {
       .limit(1)
       .maybeSingle()
 
-    // Otherwise pick the approved plate least recently shown (null = never shown, shown first)
+    // Otherwise pick the approved plate least recently shown
     let seed = alreadyToday
-    if (!seed) {
+    if (!dbDaily && !seed) {
       const { data: nextPlate } = await supabase
         .from('daily_pool')
         .select('*')
@@ -55,37 +48,60 @@ router.get('/', optionalAuth, async (req, res, next) => {
       seed = nextPlate
     }
 
-    if (!seed) {
-      // No approved plates in DB — use emergency fallback
-      return res.json({
-        id: `fallback-${today}`,
+    // ── Build the challenge ID (same logic as submit route) ──────────────────
+    let challengeId, payload
+    if (dbDaily) {
+      challengeId = dbDaily.id
+      payload = {
+        id: challengeId,
+        plate: dbDaily.plates.text,
+        state: dbDaily.plates.state,
+        date: today,
+      }
+    } else if (seed) {
+      challengeId = `pool-${today}-${seed.id}`
+      // Fire-and-forget: increment times_shown
+      supabase
+        .from('daily_pool')
+        .update({ times_shown: (seed.times_shown || 0) + 1, last_shown_at: new Date().toISOString() })
+        .eq('id', seed.id)
+        .then(() => {}).catch(() => {})
+      payload = {
+        id: challengeId,
+        plate: seed.plate_text,
+        state: seed.state,
+        date: today,
+        meaning: seed.meaning,
+        category: seed.category,
+        difficulty: seed.difficulty,
+        rarity: seed.rarity,
+      }
+    } else {
+      challengeId = `fallback-${today}`
+      payload = {
+        id: challengeId,
         plate: EMERGENCY_FALLBACK.plate,
         state: EMERGENCY_FALLBACK.state,
         date: today,
         meaning: EMERGENCY_FALLBACK.meaning,
-      })
+      }
     }
 
-    // Fire-and-forget: increment times_shown
-    supabase
-      .from('daily_pool')
-      .update({ times_shown: (seed.times_shown || 0) + 1, last_shown_at: new Date().toISOString() })
-      .eq('id', seed.id)
-      .then(() => {})
-      .catch(() => {})
+    // ── Check if this authenticated user has already submitted today ──────────
+    let alreadySolved = false
+    if (req.user?.id) {
+      const { data: prior } = await supabase
+        .from('daily_submissions')
+        .select('id')
+        .eq('user_id', req.user.id)
+        .eq('challenge_id', challengeId)
+        .limit(1)
+        .maybeSingle()
+      alreadySolved = !!prior
+    }
 
-    res.json({
-      id: `pool-${today}-${seed.id}`,
-      plate: seed.plate_text,
-      state: seed.state,
-      date: today,
-      meaning: seed.meaning,
-      category: seed.category,
-      difficulty: seed.difficulty,
-      rarity: seed.rarity,
-    })
+    res.json({ ...payload, alreadySolved })
   } catch (err) {
-    // Full DB failure — use emergency fallback
     const today = getTodayStr()
     res.json({
       id: `fallback-${today}`,
@@ -93,6 +109,7 @@ router.get('/', optionalAuth, async (req, res, next) => {
       state: EMERGENCY_FALLBACK.state,
       date: today,
       meaning: EMERGENCY_FALLBACK.meaning,
+      alreadySolved: false,
     })
   }
 })

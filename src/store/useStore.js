@@ -39,18 +39,23 @@ const useStore = create(
           : { statesCollected: [...s.statesCollected, abbr] }
       ),
 
-      // ── Streak ─────────────────────────────────────────────────────────────
-      streak: 0,
-      lastDailyDate: null,
-      markDailyDone: () => {
+      // ── Streak (per-user, keyed by user ID) ────────────────────────────────
+      // dailyByUser: { [userId | '_anon']: { streak, lastDailyDate } }
+      dailyByUser: {},
+      markDailyDone: (userId) => {
+        const key = userId || '_anon'
         const today = new Date().toDateString()
-        const last = get().lastDailyDate
-        set({
-          lastDailyDate: today,
-          streak: last === new Date(Date.now() - 86400000).toDateString()
-            ? get().streak + 1
-            : 1
-        })
+        const prior = get().dailyByUser[key] || {}
+        const yesterday = new Date(Date.now() - 86400000).toDateString()
+        set(s => ({
+          dailyByUser: {
+            ...s.dailyByUser,
+            [key]: {
+              lastDailyDate: today,
+              streak: prior.lastDailyDate === yesterday ? (prior.streak || 0) + 1 : 1,
+            }
+          }
+        }))
       },
 
       // ── Sharing ────────────────────────────────────────────────────────────

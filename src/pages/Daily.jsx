@@ -19,10 +19,17 @@ export default function Daily() {
   const [elapsed, setElapsed]       = useState(0)
   const startRef                    = useRef(null)
 
-  const { addPoints, markDailyDone, streak, lastDailyDate } = useStore()
+  const { addPoints, markDailyDone, dailyByUser, user } = useStore()
 
+  const userId     = user?.id
+  const userKey    = userId || '_anon'
   const todayStr   = new Date().toDateString()
-  const alreadyDone = lastDailyDate === todayStr
+  const userDaily  = dailyByUser?.[userKey] || {}
+  const streak     = userDaily.streak || 0
+  const localDone  = userDaily.lastDailyDate === todayStr
+
+  // alreadyDone: server is authoritative for logged-in users; local fallback for anonymous
+  const [alreadyDone, setAlreadyDone] = useState(false)
 
   const dateLabel = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric'
@@ -39,9 +46,14 @@ export default function Daily() {
     api.get('/daily')
       .then(({ data }) => {
         setDaily(data)
-        if (alreadyDone) setSubmitted(true)
+        // Server is authoritative for logged-in users; fall back to local date check for guests
+        const done = data.alreadySolved || localDone
+        if (done) { setAlreadyDone(true); setSubmitted(true) }
       })
-      .catch(() => setDaily({ plate: 'GR8FUL', id: 'demo' }))
+      .catch(() => {
+        setDaily({ plate: 'GR8FUL', id: 'demo' })
+        if (localDone) { setAlreadyDone(true); setSubmitted(true) }
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -62,7 +74,7 @@ export default function Daily() {
       setResult(data)
       setSubmitted(true)
       addPoints(data.points || 100)
-      markDailyDone()
+      markDailyDone(userId)
       track('daily_completed', {
         plate:           daily?.plate,
         points:          data.points || 100,
@@ -81,7 +93,7 @@ export default function Daily() {
     } catch (err) {
       // Server rejected as duplicate — don't award points again
       if (err.response?.status === 409) {
-        markDailyDone()
+        markDailyDone(userId)
         setSubmitted(true)
         setResult({ primary: guess, points: 0, feedback: err.response.data?.error || "You've already submitted today — come back tomorrow!" })
         return
@@ -90,7 +102,7 @@ export default function Daily() {
       setResult({ primary: guess, points: 50, rarity: 'common', feedback: 'Answer recorded offline!' })
       setSubmitted(true)
       addPoints(50)
-      markDailyDone()
+      markDailyDone(userId)
 
       // Sync to daily groups (fire and forget)
       const elapsedNow = startRef.current ? Math.round((Date.now() - startRef.current) / 1000) : 0
