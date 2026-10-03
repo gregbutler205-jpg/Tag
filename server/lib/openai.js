@@ -20,7 +20,7 @@ function getFireworksClient() {
   return _fireworksClient
 }
 
-const PRIMARY_MODEL = process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/deepseek-v4-flash'
+const PRIMARY_MODEL = process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/deepseek-v4p1-flash'
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are an expert interpreter of US vanity license plates for Tag Wizard, a plate-decoding game.
@@ -283,9 +283,16 @@ export async function interpretPlate(plateText, context = {}) {
   const messages = buildMessages(plateText, context)
 
   const jsonMode = { response_format: { type: 'json_object' } }
-  const response = await getFireworksClient().chat.completions.create({
-    model: PRIMARY_MODEL, messages, temperature: 0.2, max_tokens: 1500, ...jsonMode,
-  })
+  let response
+  try {
+    response = await getFireworksClient().chat.completions.create({
+      model: PRIMARY_MODEL, messages, temperature: 0.2, max_tokens: 1500, ...jsonMode,
+    })
+  } catch (err) {
+    // Surface the provider error (e.g. a retired model returns 404) in the server logs
+    console.error(`[interpretPlate] Fireworks call failed (model: ${PRIMARY_MODEL}):`, err.status || '', err.message)
+    throw err
+  }
   const rawContent = response.choices[0].message.content
 
   const raw        = safeParseJSON(rawContent, plateText)

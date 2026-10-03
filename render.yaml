@@ -14,7 +14,7 @@ services:
       - key: FIREWORKS_API_KEY
         sync: false
       - key: FIREWORKS_MODEL
-        value: accounts/fireworks/models/deepseek-v4-flash
+        value: accounts/fireworks/models/deepseek-v4p1-flash
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_KEY
