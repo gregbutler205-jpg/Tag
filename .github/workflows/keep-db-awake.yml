@@ -1,0 +1,37 @@
+# Supabase pauses free-plan projects after about a week of low activity.
+# This visits the leaderboard once a day; the server reads the users table
+# to answer, which counts as database activity.
+#
+# If the database is unreachable, the leaderboard answers with its built-in
+# sample players (PlateHunter99 ...). The check fails in that case, and GitHub
+# emails the repo owner about the failed run.
+name: Keep database awake
+
+on:
+  schedule:
+    - cron: '17 14 * * *'   # daily, 14:17 UTC (morning US time)
+  workflow_dispatch:         # "Run workflow" button for a manual check
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the leaderboard (touches the database)
+        run: |
+          body=""
+          for attempt in 1 2 3; do
+            # Render's free plan can take up to a minute to wake the server
+            body=$(curl -sf -m 90 https://tag.iwonde.com/leaderboard) && break
+            echo "Attempt $attempt failed, retrying in 30s"
+            sleep 30
+          done
+          echo "Response: ${body:0:200}"
+          if [ -z "$body" ]; then
+            echo "::error::Tag server did not answer"
+            exit 1
+          fi
+          if echo "$body" | grep -q 'PlateHunter99'; then
+            echo "::error::Leaderboard returned sample data. The Supabase database may be paused: restore it in the Supabase dashboard."
+            exit 1
+          fi
+          echo "Database is awake."
