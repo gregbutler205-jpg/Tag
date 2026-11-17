@@ -25,7 +25,9 @@ const PORT = process.env.PORT || 3001
 app.use(helmet())
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-app.use(cors({ origin: ['http://localhost:5173', 'https://tag.iwonde.com', process.env.FRONTEND_URL].filter(Boolean) }))
+// Capacitor native apps load from their own local origins:
+// https://localhost (Android) and capacitor://localhost (iOS).
+app.use(cors({ origin: ['http://localhost:5173', 'https://tag.iwonde.com', 'https://localhost', 'capacitor://localhost', process.env.FRONTEND_URL].filter(Boolean) }))
 app.use(express.json({ limit: '10mb' }))
 
 app.use(generalLimiter)
