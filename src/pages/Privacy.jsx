@@ -56,7 +56,7 @@ export default function Privacy() {
       <Section title="2. How We Use Your Information">
         <ul className="list-disc pl-5 space-y-2">
           <Li>To operate the game — decoding plates, leaderboards, groups, daily challenges, and state collection.</Li>
-          <Li>To power AI decoding — plate text and state are sent to the xAI Grok API for interpretation. No usernames or personal data are included. API data is not used to train AI models.</Li>
+          <Li>To power AI decoding — plate text and state are sent to our AI service providers for interpretation. No usernames or personal data are included. API data is not used to train AI models.</Li>
           <Li>To moderate content — AI and community flags are used to maintain a safe environment.</Li>
           <Li>To prevent abuse — server logs and behavioral patterns are used to detect cheating and spam.</Li>
         </ul>
@@ -65,8 +65,7 @@ export default function Privacy() {
       <Section title="3. How We Share Your Information">
         <P>We do not sell, rent, or trade your information. We share limited data only with these service providers:</P>
         <ul className="list-disc pl-5 space-y-2">
-          <Li><span className="text-white font-semibold">AI service providers</span> — receive plate text for interpretation. No personal data shared.</Li>
-          <Li><span className="text-white font-semibold">OpenAI</span> — receives plate photos for OCR text extraction. No personal data shared.</Li>
+          <Li><span className="text-white font-semibold">AI service providers</span> — receive plate text for interpretation, and plate photos to read the characters on the plate. No personal data shared.</Li>
           <Li><span className="text-white font-semibold">Supabase</span> — hosts our database.</Li>
           <Li><span className="text-white font-semibold">Render</span> — hosts our application server.</Li>
         </ul>

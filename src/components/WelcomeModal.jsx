@@ -76,7 +76,7 @@ export default function WelcomeModal() {
               {/* Feature cards */}
               <div className="space-y-2 text-left">
                 {[
-                  { emoji: '🤖', title: 'The Wizard Decodes Every Plate',   desc: 'Powered by xAI Grok — from Common to Legendary rarity.' },
+                  { emoji: '🤖', title: 'The Wizard Decodes Every Plate',   desc: 'Powered by AI — from Common to Legendary rarity.' },
                   { emoji: '🏆', title: 'Can You Beat The Wizard?',     desc: 'Submit your own interpretation for bonus points.' },
                   { emoji: '🏷️', title: 'Tag of the Day',           desc: 'One global daily challenge — everyone plays the same plate.' },
                   { emoji: '👥', title: 'Group Road Trip Mode',      desc: 'Compete live with friends and family in the car.' },
