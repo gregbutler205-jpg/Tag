@@ -28,7 +28,7 @@ export default function Privacy() {
         <BackButton />
         <div>
           <h1 className="text-2xl font-black text-white">Privacy Policy</h1>
-          <p className="text-slate-500 text-xs">Effective March 26, 2026 · iWonde, LLC</p>
+          <p className="text-slate-500 text-xs">Effective November 17, 2026 · iWonde, LLC</p>
         </div>
       </div>
 
@@ -56,7 +56,8 @@ export default function Privacy() {
       <Section title="2. How We Use Your Information">
         <ul className="list-disc pl-5 space-y-2">
           <Li>To operate the game — decoding plates, leaderboards, groups, daily challenges, and state collection.</Li>
-          <Li>To power AI decoding — plate text and state are sent to our AI service providers for interpretation. No usernames or personal data are included. API data is not used to train AI models.</Li>
+          <Li>To power AI decoding — plate text and state are sent to our AI service providers for interpretation. No usernames or personal data are included, and our AI service providers do not use this data to train their own models.</Li>
+          <Li>To improve The Wizard — we keep decoded plates (the plate text, state and meaning), including the interpretations you submit in "Can You Beat The Wizard?", and use them to improve Tag Wizard's own decoding. Your username and account details are not included in the data used for this.</Li>
           <Li>To moderate content — AI and community flags are used to maintain a safe environment.</Li>
           <Li>To prevent abuse — server logs and behavioral patterns are used to detect cheating and spam.</Li>
         </ul>
